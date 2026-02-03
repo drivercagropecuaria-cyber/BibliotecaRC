@@ -277,6 +277,9 @@ export function UploadPage() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
+    onDragEnter: () => {},
+    onDragOver: () => {},
+    onDragLeave: () => {},
     accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp'], 'video/*': ['.mp4', '.mov', '.avi', '.webm', '.mkv'], 'application/pdf': ['.pdf'] },
     maxSize: MAX_FILE_SIZE,
     multiple: true,

@@ -8,7 +8,7 @@ export const queryKeys = {
   items: (localidade?: string, filters?: Record<string, string>, search?: string, page?: number) => 
     ['items', localidade, filters, search, page] as const,
   item: (id: string | number) => ['item', id] as const,
-  workflowItems: (filters?: Record<string, string>) => ['workflowItems', filters] as const,
+  workflowItems: (filters?: Record<string, string | number | boolean | undefined>) => ['workflowItems', filters] as const,
   taxonomy: ['taxonomy'] as const,
 }
 

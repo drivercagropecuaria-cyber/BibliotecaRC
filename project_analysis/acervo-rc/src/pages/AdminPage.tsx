@@ -65,9 +65,8 @@ export function AdminPage() {
 
   // Obter subitens de um item
   const getSubItems = (parentId: string) => {
-    const childKey = currentTypeConfig?.childKey
-    if (!childKey) return []
-    return taxonomy.filter(t => t.type === childKey && t.parent_id === parentId)
+    if (!currentTypeConfig?.hasChildren) return []
+    return taxonomy.filter(t => t.type === selectedType && t.parent_id === parentId)
       .sort((a, b) => a.display_order - b.display_order)
   }
 
@@ -78,14 +77,15 @@ export function AdminPage() {
     setError(null)
     
     try {
-      const type = parentId ? currentTypeConfig?.childKey : selectedType
-      const maxOrder = taxonomy.filter(t => t.type === type && t.parent_id === (parentId || null))
+      const type = selectedType
+      const parentKey = currentTypeConfig?.hasChildren ? (parentId || null) : null
+      const maxOrder = taxonomy.filter(t => t.type === type && t.parent_id === parentKey)
         .reduce((max, t) => Math.max(max, t.display_order), -1)
       
       const { error } = await supabase.from('taxonomy_categories').insert({
         type,
         name: newItemName.trim(),
-        parent_id: parentId || null,
+        parent_id: parentKey,
         display_order: maxOrder + 1,
         is_active: true
       })

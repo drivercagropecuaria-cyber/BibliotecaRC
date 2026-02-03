@@ -18,8 +18,7 @@ project_analysis/user_input_files/
 # Secrets
 cron_secret.txt
 
-# Generated lockfiles (pnpm is used)
-project_analysis/acervo-rc/package-lock.json
+# Generated lockfiles
 
 # Supabase temp artifacts in nested project
 project_analysis/acervo-rc/supabase/.temp/

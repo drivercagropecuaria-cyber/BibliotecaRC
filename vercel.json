@@ -1,7 +1,7 @@
 {
   "framework": "vite",
-  "installCommand": "cd project_analysis/acervo-rc && pnpm install --prefer-offline",
-  "buildCommand": "cd project_analysis/acervo-rc && pnpm run build",
+  "installCommand": "cd project_analysis/acervo-rc && npm ci",
+  "buildCommand": "cd project_analysis/acervo-rc && npm run build",
   "outputDirectory": "project_analysis/acervo-rc/dist",
   "headers": [
     {

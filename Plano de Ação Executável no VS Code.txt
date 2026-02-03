@@ -1,0 +1,206 @@
+
+Abaixo vai um **Plano de Ação Executável no VS Code (Copilot Agent / GPT Agent)**, baseado no seu log real:
+
+* O **único erro “de verdade”** que aparece claramente no `/login` é **CSP bloqueando o Google Fonts** (`style-src-elem` impedindo `fonts.googleapis.com`). Isso normalmente **não quebra o login**, mas gera erro na abertura e pode bagunçar estilos/UX. A correção correta é **ou** (A) *remover dependência externa de fontes* (mais “enterprise”) **ou** (B) *ajustar CSP para permitir Google Fonts*.
+* Os avisos `__cf_bm` “domínio inválido” parecem ruído de cookie/terceiros e **não impedem** seus `GET` para Supabase Storage (estão 200/206).
+* Seu app está conseguindo buscar dados do Supabase (`rest/v1`, `rpc`) — então o backend não está “morto”; o problema do login, pelo que você colou, é **de política de segurança do frontend (CSP)**.
+
+Referências oficiais/boas práticas: Vercel CSP headers ([Vercel][2]) e Supabase Auth Redirect URLs ([Supabase][3]).
+
+---
+
+# Plano Mestre de Correção (VS Code Agent Ready)
+
+## FASE 0 — Triagem Forense (garantir que a causa está correta)
+
+**Diagnóstico rápido:** você tem erro de CSP no `/login`. Antes de mexer, vamos localizar **onde o CSP é definido** (Vercel headers / `vercel.json` / meta tag / middleware).
+**Impacto esperado:** parar de “atirar no escuro” e corrigir na fonte.
+
+**PROMPT PARA O AGENTE (cole no VS Code):**
+
+```text
+@workspace Vamos fazer triagem forense do erro no /login.
+1) Procure no repositório por qualquer configuração de CSP/headers:
+   - Arquivos possíveis: vercel.json, _headers, public/_headers, netlify.toml, nginx.conf, middleware.*, index.html (meta http-equiv), src/main.*, src/index.*, vite.config.*
+   - Busque por strings: "Content-Security-Policy", "style-src", "font-src", "default-src", "report-to", "fonts.googleapis.com", "fonts.gstatic.com".
+2) Gere um relatório curto em Markdown em docs/runbooks/csp-audit.md contendo:
+   - Onde o CSP está sendo definido (arquivo e trecho).
+   - Qual é o CSP atual.
+   - Quais recursos externos ele bloqueia (pelo menos Google Fonts).
+3) Não altere nada ainda. Só localize e documente.
+```
+
+---
+
+## FASE 1 — Corrigir o erro do Login (CSP + Fonts) — **Pilar “Estabilidade da UI”**
+
+### Decisão arquitetural recomendada
+
+**Recomendação “enterprise-grade”:** **não depender de Google Fonts** em produção → **self-host** do Inter (WOFF2 local).
+Isso reduz superfície de ataque e evita “briga” com CSP. Vercel recomenda CSP por headers e você ganha controle total. ([Vercel][2])
+
+### Passo 1.1 — Remover Google Fonts (self-host do Inter)
+
+**Impacto esperado:** elimina o erro de CSP e reduz dependências externas no login.
+
+**PROMPT PARA O AGENTE:**
+
+```text
+@workspace Corrigir erro de CSP removendo Google Fonts e self-hostando a fonte Inter.
+1) Encontre onde a fonte Inter está sendo importada:
+   - index.html (<link rel="stylesheet" href="https://fonts.googleapis.com...">)
+   - CSS global com @import url("https://fonts.googleapis.com/...")
+2) Remova completamente qualquer referência a fonts.googleapis.com e fonts.gstatic.com.
+3) Adicione a fonte Inter local:
+   - Crie a pasta public/fonts/inter/ (ou src/assets/fonts/inter/ conforme padrão do projeto)
+   - Inclua arquivos WOFF2 (Inter-roman.var.woff2 e Inter-italic.var.woff2) — se já existirem no repo, apenas use; se não existirem, deixe TODO no docs/runbooks com instrução clara de download manual.
+4) Crie um arquivo de estilos (ex: src/styles/fonts.css ou src/index.css) com @font-face apontando para /fonts/inter/...
+5) Garanta que o CSS global use font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+6) Atualize o Tailwind (tailwind.config.*) se existir, para reconhecer Inter como font-sans.
+7) Rode uma busca final para garantir que NÃO existe mais "fonts.googleapis.com" no repositório.
+8) Entregue um resumo do que foi alterado.
+Importante: não mexer em segredos/env.
+```
+
+### Passo 1.2 — (Opcional) Ajustar CSP em vez de remover Google Fonts
+
+Se você preferir manter Google Fonts, o CSP precisa permitir `style-src` para `fonts.googleapis.com` e `font-src` para `fonts.gstatic.com`. Exemplos clássicos desse ajuste ([Content Security Policy][4])
+
+**PROMPT PARA O AGENTE:**
+
+```text
+@workspace Alternativa: manter Google Fonts e ajustar CSP corretamente por headers.
+1) Se não existir vercel.json, crie na raiz.
+2) Configure "headers" no vercel.json para aplicar Content-Security-Policy em todas as rotas.
+3) Atualize CSP para permitir:
+   - style-src e/ou style-src-elem: 'self' 'unsafe-inline' https://fonts.googleapis.com
+   - font-src: 'self' data: https://fonts.gstatic.com
+4) Garanta que o CSP NÃO quebre o app:
+   - connect-src deve permitir chamadas ao Supabase (https://*.supabase.co)
+   - img-src e media-src devem permitir https://*.supabase.co e data: blob:
+5) Documente em docs/runbooks/csp-policy.md o CSP final e o porquê.
+Observação: prefira a opção self-host; esta é a alternativa.
+```
+
+> Nota: o jeito correto de controlar CSP na Vercel é via headers (ex.: `vercel.json`), mantendo rastreabilidade e evitando “config fantasma” no dashboard. ([Vercel][2])
+
+---
+
+## FASE 2 — Garantir que o Login não “quebra” por Redirect/Auth (Supabase URL Config)
+
+Mesmo que seu log não mostre falha de auth, é comum: login abre, usuário autentica, mas o Supabase redireciona errado (ex.: volta pra localhost ou bloqueia `redirectTo`). A docs do Supabase deixa explícito: **Redirect URLs precisam estar configuradas corretamente**. ([Supabase][3])
+
+### Passo 2.1 — Checagem de Redirect URLs (documentar e “fixar” no repo)
+
+**Impacto esperado:** login consistente em produção/preview/local sem comportamentos “fantasmas”.
+
+**PROMPT PARA O AGENTE:**
+
+```text
+@workspace Vamos harden de Auth Redirects e criar um checklist operacional.
+1) Crie docs/runbooks/supabase-auth-redirects.md com:
+   - Qual é o domínio de produção atual (acervo-rc.vercel.app)
+   - Quais preview URLs precisam entrar (se houver)
+   - Quais rotas de callback são usadas pelo app (ex.: /auth/callback, /login, /)
+2) No código, localize onde auth é iniciado:
+   - lib/supabase.ts (ou equivalente)
+   - AuthProvider / hooks de sessão
+   - chamadas signInWithPassword / signInWithOAuth
+3) Garanta que signInWithOAuth (se existir) passe redirectTo consistente com produção.
+4) Não altere configurações do dashboard; apenas deixe o checklist preciso e a lista de URLs necessárias.
+```
+
+### Passo 2.2 — Robustez de sessão (evitar “cair no meio”)
+
+**Impacto esperado:** token renovando automaticamente e o usuário não perde sessão em tela sensível.
+
+**PROMPT PARA O AGENTE:**
+
+```text
+@workspace Endurecer a gestão de sessão do Supabase no frontend.
+1) Localize a criação do client Supabase (createClient).
+2) Verifique/garanta:
+   - persistSession: true
+   - autoRefreshToken: true
+   - detectSessionInUrl: true (se OAuth)
+3) No AuthProvider, valide que existe listener de onAuthStateChange para atualizar estado global.
+4) Adicione logs controlados (somente em dev) para:
+   - TOKEN_REFRESHED
+   - SIGNED_IN / SIGNED_OUT
+5) Não logar tokens. Apenas eventos.
+6) Crie docs/runbooks/auth-session-lifecycle.md explicando o ciclo de sessão.
+```
+
+---
+
+## FASE 3 — “Ruídos” e Percepção de Erro (cookies __cf_bm / performance / repetição de calls)
+
+Você viu muitos `GET` de thumbnails e avisos do cookie `__cf_bm`. Isso costuma ser ruído de third-party cookies/Cloudflare e **não impede** os 200/206 que você tem. O que dá para melhorar é: reduzir carga e evitar múltiplas queries repetidas.
+
+### Passo 3.1 — De-duplicar queries e reduzir “refetch” desnecessário
+
+**Impacto esperado:** menos XHR repetido, UI mais leve, menos sensação de “travamento”.
+
+**PROMPT PARA O AGENTE:**
+
+```text
+@workspace Otimizar TanStack Query para reduzir chamadas repetidas.
+1) Localize onde o QueryClient é criado/configurado.
+2) Ajuste defaults (sem quebrar consistência):
+   - staleTime apropriado para dados quase estáticos (taxonomy_categories, naming_rules)
+   - refetchOnWindowFocus: false para queries não críticas
+3) Identifique queries duplicadas disparadas por múltiplos componentes na mesma tela.
+4) Centralize essas queries em um hook único (ex.: useTaxonomy(), useNamingRules()) e reuse.
+5) Garanta que o cache key seja consistente (mesmo key => dedupe automático).
+6) Documente as decisões em docs/runbooks/query-caching.md
+```
+
+### Passo 3.2 — Thumbnails: carregamento progressivo e lazy
+
+**Impacto esperado:** menos estouro de rede, render mais rápido.
+
+**PROMPT PARA O AGENTE:**
+
+```text
+@workspace Melhorar carregamento de thumbnails para evitar flood de requests.
+1) Localize o componente de lista/galeria que renderiza thumbnails (Dashboard/Library).
+2) Garanta:
+   - <img loading="lazy" decoding="async">
+   - placeholder (skeleton) até carregar
+3) Se houver paginação/limit, confirme que não está carregando mais do que o necessário.
+4) Se houver grid grande, aplicar virtualização (react-virtual) se já existir no projeto.
+5) Não alterar regras de negócio; apenas UX/perf.
+```
+
+---
+
+# Comandos Operacionais (rodar no terminal do VS Code)
+
+Use os comandos abaixo entre as etapas (ajuste para npm/pnpm/yarn conforme seu projeto):
+
+```bash
+# 1) Instalar dependências
+npm ci
+
+# 2) Rodar local
+npm run dev
+
+# 3) Build de produção (pega problemas de bundling/CSP/paths)
+npm run build
+
+# 4) Preview do build
+npm run preview
+
+# 5) Lint (se existir)
+npm run lint
+```
+
+---
+
+# Checklist de Validação (pós-merge/pós-deploy)
+
+1. Abrir `/login` e confirmar **zero erro de CSP** no console (principalmente Google Fonts).
+2. Confirmar que a UI renderiza com fonte correta (Inter local ou fallback).
+3. Login em produção: autentica, mantém sessão após F5, e não redireciona pra URL errada (Supabase Redirect URLs). ([Supabase][3])
+4. Telas principais não duplicam XHR em loop (taxonomia/naming_rules).
+5. Thumbnails carregam progressivamente, sem travar a UI.

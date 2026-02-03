@@ -28,7 +28,6 @@ body {
   font-family: 'Inter', system-ui, sans-serif;
   background-color: #f8fafc;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Glass morphism utility */

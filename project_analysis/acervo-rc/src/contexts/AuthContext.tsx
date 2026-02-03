@@ -35,6 +35,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [profileLoaded, setProfileLoaded] = useState(false)
 
+  const isInvalidRefreshToken = (err: any) => {
+    const message = err?.message?.toLowerCase?.() || ''
+    return message.includes('invalid refresh token') || message.includes('refresh token not found')
+  }
+
   const fetchProfile = async (userId: string, userEmail: string) => {
     try {
       const { data, error } = await supabase
@@ -81,16 +86,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let mounted = true
 
     const initSession = async () => {
-      const { data } = await supabase.auth.getSession()
-      if (!mounted) return
-      setSession(data.session)
-      setUser(data.session?.user ?? null)
+      try {
+        const { data, error } = await supabase.auth.getSession()
+        if (!mounted) return
 
-      if (data.session?.user?.id) {
-        await fetchProfile(data.session.user.id, data.session.user.email || '')
+        if (error && isInvalidRefreshToken(error)) {
+          await supabase.auth.signOut()
+          setSession(null)
+          setUser(null)
+          setProfile(null)
+          setProfileLoaded(false)
+          setLoading(false)
+          return
+        }
+
+        setSession(data.session)
+        setUser(data.session?.user ?? null)
+
+        if (data.session?.user?.id) {
+          await fetchProfile(data.session.user.id, data.session.user.email || '')
+        }
+
+        setLoading(false)
+      } catch (err) {
+        if (isInvalidRefreshToken(err)) {
+          await supabase.auth.signOut()
+        }
+        setSession(null)
+        setUser(null)
+        setProfile(null)
+        setProfileLoaded(false)
+        setLoading(false)
       }
-
-      setLoading(false)
     }
 
     initSession()

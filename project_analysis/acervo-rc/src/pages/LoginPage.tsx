@@ -1,15 +1,13 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { LogIn, UserPlus, Mail, Lock, Eye, EyeOff, Loader2, AlertCircle, Leaf } from 'lucide-react'
+import { LogIn, Mail, Lock, Eye, EyeOff, Loader2, AlertCircle, Leaf } from 'lucide-react'
 
 export function LoginPage() {
   const navigate = useNavigate()
-  const { signIn, signUp } = useAuth()
-  const [isLogin, setIsLogin] = useState(true)
+  const { signIn } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [nome, setNome] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -22,16 +20,9 @@ export function LoginPage() {
     setLoading(true)
 
     try {
-      if (isLogin) {
-        const { error } = await signIn(email, password)
-        if (error) throw error
-        navigate('/')
-      } else {
-        const { error } = await signUp(email, password, nome)
-        if (error) throw error
-        // Login automático após cadastro
-        navigate('/')
-      }
+      const { error } = await signIn(email, password)
+      if (error) throw error
+      navigate('/')
     } catch (err: any) {
       setError(err.message || 'Erro ao processar')
     } finally {
@@ -53,30 +44,14 @@ export function LoginPage() {
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-glass p-8">
-          {/* Tabs */}
-          <div className="flex gap-2 mb-6">
-            <button
-              onClick={() => setIsLogin(true)}
-              className={`flex-1 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
-                isLogin
-                  ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-green'
-                  : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
-              }`}
-            >
+          <div className="mb-6">
+            <div className="w-full py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-green">
               <LogIn className="w-4 h-4" />
               Entrar
-            </button>
-            <button
-              onClick={() => setIsLogin(false)}
-              className={`flex-1 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
-                !isLogin
-                  ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-green'
-                  : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
-              }`}
-            >
-              <UserPlus className="w-4 h-4" />
-              Cadastrar
-            </button>
+            </div>
+            <p className="text-xs text-neutral-500 mt-2 text-center">
+              Cadastro de usuários somente por administrador.
+            </p>
           </div>
 
           {/* Mensagens */}
@@ -94,19 +69,6 @@ export function LoginPage() {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Nome</label>
-                <input
-                  type="text"
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  placeholder="Seu nome"
-                  className="w-full px-4 py-3 border-2 border-neutral-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-neutral-50"
-                />
-              </div>
-            )}
-
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-1">Email</label>
               <div className="relative">
@@ -152,15 +114,10 @@ export function LoginPage() {
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
-              ) : isLogin ? (
+              ) : (
                 <>
                   <LogIn className="w-5 h-5" />
                   Entrar
-                </>
-              ) : (
-                <>
-                  <UserPlus className="w-5 h-5" />
-                  Criar Conta
                 </>
               )}
             </button>

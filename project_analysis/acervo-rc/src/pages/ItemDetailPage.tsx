@@ -65,6 +65,8 @@ export function ItemDetailPage() {
   const statusClass = statusColors[item.status || ''] || 'bg-neutral-200 text-neutral-700'
   const isImage = item.arquivo_tipo?.startsWith('image')
   const isVideo = item.arquivo_tipo?.startsWith('video')
+  const imageUrl = item.arquivo_url || item.thumbnail_url
+  const isQuicktime = item.arquivo_tipo?.includes('quicktime') || item.arquivo_nome?.toLowerCase().endsWith('.mov')
 
   const InfoItem = ({ label, value, icon: Icon }: { label: string; value?: string | null; icon?: any }) => {
     if (!value) return null
@@ -98,10 +100,21 @@ export function ItemDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-5">
           <div className="bg-white rounded-2xl shadow-glass overflow-hidden" onClick={() => isImage && setLightboxOpen(true)}>
-            {isImage && item.arquivo_url ? (
-              <img src={item.arquivo_url} alt={item.titulo} className="w-full h-auto max-h-[500px] object-contain bg-neutral-100 cursor-pointer" />
-            ) : isVideo && item.arquivo_url ? (
+            {isImage && imageUrl ? (
+              <img
+                src={imageUrl}
+                alt={item.titulo}
+                loading="lazy"
+                decoding="async"
+                className="w-full h-auto max-h-[500px] object-contain bg-neutral-100 cursor-pointer"
+              />
+            ) : isVideo && item.arquivo_url && !isQuicktime ? (
               <video src={item.arquivo_url} controls className="w-full max-h-[500px]" />
+            ) : isVideo && isQuicktime ? (
+              <div className="w-full h-64 bg-gradient-to-br from-neutral-100 to-neutral-200 flex flex-col items-center justify-center text-neutral-600 px-6 text-center">
+                <div className="text-sm font-semibold mb-2">Preview indisponível para .mov</div>
+                <p className="text-xs">Este formato não é suportado no navegador. Use o botão de download.</p>
+              </div>
             ) : (
               <div className="w-full h-64 bg-gradient-to-br from-neutral-100 to-neutral-200 flex items-center justify-center">{getFileIcon(item.arquivo_tipo)}</div>
             )}
@@ -202,10 +215,16 @@ export function ItemDetailPage() {
         </div>
       </div>
 
-      {lightboxOpen && item.arquivo_url && (
+      {lightboxOpen && imageUrl && (
         <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-8" onClick={() => setLightboxOpen(false)}>
           <button className="absolute top-4 right-4 text-white hover:text-neutral-300"><X className="w-8 h-8" /></button>
-          <img src={item.arquivo_url} alt={item.titulo} className="max-w-full max-h-full object-contain" />
+          <img
+            src={imageUrl}
+            alt={item.titulo}
+            loading="lazy"
+            decoding="async"
+            className="max-w-full max-h-full object-contain"
+          />
         </div>
       )}
 

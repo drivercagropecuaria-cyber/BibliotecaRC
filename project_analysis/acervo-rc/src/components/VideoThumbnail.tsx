@@ -26,7 +26,6 @@ export const VideoThumbnail = memo(function VideoThumbnail({
   const [error, setError] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
   const [useImage, setUseImage] = useState(!!thumbnailUrl)
-  const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const timeoutRef = useRef<NodeJS.Timeout>()
 
@@ -65,28 +64,10 @@ export const VideoThumbnail = memo(function VideoThumbnail({
     }
   }, [isVisible, src])
 
-  const handleLoadedData = () => {
-    setLoaded(true)
-    if (timeoutRef.current) clearTimeout(timeoutRef.current)
-  }
-
   const handleError = () => {
     setError(true)
     onError?.()
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
-  }
-
-  const handleMouseEnter = () => {
-    if (onHoverPlay && videoRef.current && loaded) {
-      videoRef.current.play()
-    }
-  }
-
-  const handleMouseLeave = () => {
-    if (onHoverPlay && videoRef.current) {
-      videoRef.current.pause()
-      videoRef.current.currentTime = 0.1
-    }
   }
 
   const iconSizes = {
@@ -104,7 +85,7 @@ export const VideoThumbnail = memo(function VideoThumbnail({
   }
 
   return (
-    <div ref={containerRef} className={`relative ${className}`} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+    <div ref={containerRef} className={`relative ${className}`}>
       {isVisible && useImage && thumbnailUrl ? (
         <img
           src={thumbnailUrl}
@@ -112,18 +93,6 @@ export const VideoThumbnail = memo(function VideoThumbnail({
           className={`w-full h-full object-cover ${!loaded ? 'opacity-0' : 'opacity-100'} transition-opacity`}
           onLoad={() => setLoaded(true)}
           onError={() => { setUseImage(false); setLoaded(false) }}
-        />
-      ) : isVisible && !useImage ? (
-        <video
-          ref={videoRef}
-          src={`${src}#t=0.1`}
-          preload="auto"
-          muted
-          playsInline
-          crossOrigin="anonymous"
-          className={`w-full h-full object-cover ${!loaded ? 'opacity-0' : 'opacity-100'} transition-opacity`}
-          onLoadedData={handleLoadedData}
-          onError={handleError}
         />
       ) : null}
       

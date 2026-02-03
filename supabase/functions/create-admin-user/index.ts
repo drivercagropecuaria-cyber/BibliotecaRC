@@ -14,6 +14,17 @@ Deno.serve(async (req) => {
         });
     }
 
+    const adminSecret = Deno.env.get('ADMIN_SECRET');
+    const providedSecret = req.headers.get('x-admin-secret') || '';
+    if (!adminSecret || providedSecret !== adminSecret) {
+      return new Response(JSON.stringify({
+        error: { code: 'FORBIDDEN', message: 'Missing or invalid admin secret' }
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401,
+      });
+    }
+
     try {
       // Get parameters from request body
       const requestBody = await req.json();

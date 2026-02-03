@@ -33,9 +33,9 @@ const ItemCard = ({ item, onOpen, onDownload, getItemIcon }: {
 }) => (
   <div className="group relative bg-white rounded-2xl overflow-hidden shadow-glass hover:shadow-xl transition-all duration-300">
     <div className="aspect-square relative overflow-hidden cursor-pointer" onClick={() => onOpen(item)}>
-      {item.arquivo_url && item.arquivo_tipo?.startsWith('image') ? (
-        <OptimizedImage src={item.arquivo_url} alt={item.titulo || ''} className="w-full h-full transition-transform duration-500 group-hover:scale-110" />
-      ) : item.arquivo_url && item.arquivo_tipo?.startsWith('video') ? (
+      {item.arquivo_tipo?.startsWith('image') && (item.arquivo_url || item.thumbnail_url) ? (
+        <OptimizedImage src={item.arquivo_url || item.thumbnail_url!} alt={item.titulo || ''} className="w-full h-full transition-transform duration-500 group-hover:scale-110" />
+      ) : item.arquivo_tipo?.startsWith('video') && item.arquivo_url ? (
         <VideoThumbnail src={item.arquivo_url} thumbnailUrl={item.thumbnail_url} className="w-full h-full" showPlayIcon={false} onHoverPlay={true} />
       ) : (
         <div className="w-full h-full bg-gradient-to-br from-neutral-200 to-neutral-300 flex items-center justify-center">
@@ -161,7 +161,14 @@ export function LocalidadePage() {
     if (filters.status) query = query.eq('status_id', filters.status)
     if (filters.ponto) query = query.eq('ponto_id', filters.ponto)
     if (filters.tema) query = query.eq('tema_principal_id', filters.tema)
-    if (debouncedSearch) query = query.or(`titulo.ilike.%${debouncedSearch}%,ponto_nome.ilike.%${debouncedSearch}%,tema_principal_nome.ilike.%${debouncedSearch}%`)
+    if (debouncedSearch) {
+      const terms = debouncedSearch.split(/\s+/).map(t => t.replace(/[,]/g, '')).filter(Boolean)
+      terms.forEach(term => {
+        query = query.or(
+          `titulo.ilike.%${term}%,ponto_nome.ilike.%${term}%,tema_principal_nome.ilike.%${term}%,tipo_projeto_nome.ilike.%${term}%,status_nome.ilike.%${term}%,responsavel.ilike.%${term}%,arquivo_nome.ilike.%${term}%,frase_memoria.ilike.%${term}%`
+        )
+      })
+    }
     
     const { data } = await query
     return (data || []) as CatalogoItem[]
@@ -176,7 +183,14 @@ export function LocalidadePage() {
     if (filters.status) query = query.eq('status_id', filters.status)
     if (filters.ponto) query = query.eq('ponto_id', filters.ponto)
     if (filters.tema) query = query.eq('tema_principal_id', filters.tema)
-    if (debouncedSearch) query = query.or(`titulo.ilike.%${debouncedSearch}%,ponto_nome.ilike.%${debouncedSearch}%,tema_principal_nome.ilike.%${debouncedSearch}%`)
+    if (debouncedSearch) {
+      const terms = debouncedSearch.split(/\s+/).map(t => t.replace(/[,]/g, '')).filter(Boolean)
+      terms.forEach(term => {
+        query = query.or(
+          `titulo.ilike.%${term}%,ponto_nome.ilike.%${term}%,tema_principal_nome.ilike.%${term}%,tipo_projeto_nome.ilike.%${term}%,status_nome.ilike.%${term}%,responsavel.ilike.%${term}%,arquivo_nome.ilike.%${term}%,frase_memoria.ilike.%${term}%`
+        )
+      })
+    }
 
     const { count } = await query
     return count || 0

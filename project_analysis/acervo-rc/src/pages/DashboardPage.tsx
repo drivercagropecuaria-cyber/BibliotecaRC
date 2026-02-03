@@ -15,6 +15,16 @@ export function DashboardPage() {
   const areaData = data?.areaData || []
   const temaData = data?.temaData || []
   const recentItems = data?.recentItems || []
+  const pipeline = data?.pipeline || {
+    total_jobs: 0,
+    pending: 0,
+    uploading: 0,
+    uploaded: 0,
+    committed: 0,
+    failed: 0,
+    expired: 0,
+    outbox_pending: 0,
+  }
 
   // Cálculos memoizados
   const { maxArea, maxTema, totalStatus } = useMemo(() => {
@@ -71,6 +81,64 @@ export function DashboardPage() {
           </div>
         ))}
       </div>
+
+      <div className="bg-white rounded-2xl p-5 shadow-glass mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-neutral-900">Saude do Upload</h2>
+          <span className="text-xs text-neutral-500">Jobs e Outbox</span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+          <div className="p-3 bg-neutral-50 rounded-xl">
+            <p className="text-xs text-neutral-500">Total</p>
+            <p className="text-lg font-bold text-neutral-900">{pipeline.total_jobs}</p>
+          </div>
+          <div className="p-3 bg-amber-50 rounded-xl">
+            <p className="text-xs text-amber-700">Pendentes</p>
+            <p className="text-lg font-bold text-amber-800">{pipeline.pending}</p>
+          </div>
+          <div className="p-3 bg-blue-50 rounded-xl">
+            <p className="text-xs text-blue-700">Enviando</p>
+            <p className="text-lg font-bold text-blue-800">{pipeline.uploading}</p>
+          </div>
+          <div className="p-3 bg-purple-50 rounded-xl">
+            <p className="text-xs text-purple-700">Enviados</p>
+            <p className="text-lg font-bold text-purple-800">{pipeline.uploaded}</p>
+          </div>
+          <div className="p-3 bg-emerald-50 rounded-xl">
+            <p className="text-xs text-emerald-700">Commitados</p>
+            <p className="text-lg font-bold text-emerald-800">{pipeline.committed}</p>
+          </div>
+          <div className="p-3 bg-red-50 rounded-xl">
+            <p className="text-xs text-red-700">Falhas</p>
+            <p className="text-lg font-bold text-red-800">{pipeline.failed}</p>
+          </div>
+          <div className="p-3 bg-neutral-100 rounded-xl">
+            <p className="text-xs text-neutral-600">Expirados</p>
+            <p className="text-lg font-bold text-neutral-800">{pipeline.expired}</p>
+          </div>
+          <div className="p-3 bg-accent-50 rounded-xl">
+            <p className="text-xs text-accent-700">Outbox</p>
+            <p className="text-lg font-bold text-accent-800">{pipeline.outbox_pending}</p>
+          </div>
+        </div>
+      </div>
+
+      {(pipeline.failed > 0 || pipeline.expired > 0 || pipeline.outbox_pending > 0) && (
+        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-4">
+          <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center shadow-lg">
+            <AlertTriangle className="w-6 h-6 text-white" />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-amber-800">Atenção no pipeline</p>
+            <p className="text-sm text-amber-700">
+              Falhas: {pipeline.failed} · Expirados: {pipeline.expired} · Outbox pendente: {pipeline.outbox_pending}
+            </p>
+          </div>
+          <Link to="/admin" className="px-4 py-2 bg-amber-600 text-white rounded-xl font-medium hover:bg-amber-700 transition-colors">
+            Ver Admin
+          </Link>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Status Chart */}

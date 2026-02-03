@@ -20,7 +20,7 @@ export interface NamingRule {
 let taxonomyCache: TaxonomyItem[] | null = null
 let namingRulesCache: NamingRule[] | null = null
 let cacheTimestamp = 0
-const CACHE_TTL = 60000 // 1 minuto
+const CACHE_TTL = 600000 // 10 minutos
 
 export async function getTaxonomy(): Promise<TaxonomyItem[]> {
   const now = Date.now()

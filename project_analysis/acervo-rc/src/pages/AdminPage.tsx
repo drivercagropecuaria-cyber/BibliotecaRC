@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { TAXONOMY_TYPES, invalidateCache, type TaxonomyItem, type NamingRule } from '@/lib/taxonomy'
 import { queryKeys } from '@/hooks/useQueries'
-import { Plus, Trash2, Edit2, Save, X, GripVertical, Eye, EyeOff, Settings, Tag, FileText, ChevronRight, ChevronDown, Loader2, Check, AlertCircle, Video, Image as ImageIcon, Wrench } from 'lucide-react'
+import { Plus, Trash2, Edit2, Save, X, GripVertical, Eye, EyeOff, Settings, Tag, FileText, ChevronRight, ChevronDown, Loader2, Check, AlertCircle, Video, Image as ImageIcon, Wrench, History, RefreshCcw, ListChecks, Activity } from 'lucide-react'
 import { generateVideoThumbnail } from '@/utils/videoThumbnail'
 
 export function AdminPage() {
@@ -516,7 +516,13 @@ export function AdminPage() {
           </div>
         </div>
       ) : activeSection === 'tools' ? (
-        <ThumbnailGenerator />
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          <ThumbnailGenerator />
+          <UploadPipelineMonitor />
+          <UploadJobsList />
+          <FunctionRunsList />
+          <AuditTrail />
+        </div>
       ) : null}
     </div>
   )
@@ -559,15 +565,15 @@ function SubItemInput({ parentId, onAdd, saving }: { parentId: string, onAdd: (n
 
 // Componente para gerar thumbnails
 function ThumbnailGenerator() {
-  const [videos, setVideos] = useState<Array<{id: number, arquivo_url: string, titulo: string}>>([])
+  const [videos, setVideos] = useState<Array<{id: number, arquivo_url: string, titulo: string, media_id: string | null}>>([])
   const [processing, setProcessing] = useState(false)
   const [progress, setProgress] = useState({ current: 0, total: 0, success: 0, failed: 0 })
   const [log, setLog] = useState<string[]>([])
 
   const loadVideosWithoutThumbnails = async () => {
     const { data, error } = await supabase
-      .from('catalogo_itens')
-      .select('id, arquivo_url, titulo')
+      .from('v_catalogo_completo')
+      .select('id, titulo, arquivo_url, media_id, thumbnail_url, arquivo_tipo')
       .like('arquivo_tipo', 'video%')
       .is('thumbnail_url', null)
       .limit(100)
@@ -613,6 +619,9 @@ function ThumbnailGenerator() {
 
         // Atualizar banco
         const { data: urlData } = supabase.storage.from('acervo-files').getPublicUrl(thumbPath)
+        if (video.media_id) {
+          await supabase.from('media_assets').update({ thumbnail_url: urlData.publicUrl }).eq('id', video.media_id)
+        }
         await supabase.from('catalogo_itens').update({ thumbnail_url: urlData.publicUrl }).eq('id', video.id)
 
         setProgress(prev => ({ ...prev, success: prev.success + 1 }))
@@ -679,6 +688,511 @@ function ThumbnailGenerator() {
           </pre>
         </div>
       )}
+    </div>
+  )
+}
+
+type PipelineStats = {
+  total_jobs: number
+  pending: number
+  uploading: number
+  uploaded: number
+  committed: number
+  failed: number
+  expired: number
+  outbox_pending: number
+}
+
+function UploadPipelineMonitor() {
+  const [stats, setStats] = useState<PipelineStats | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [actionLoading, setActionLoading] = useState(false)
+  const [actionMessage, setActionMessage] = useState<string | null>(null)
+  const anonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim()
+
+  const getAuthHeaders = useCallback(async () => {
+    const { data } = await supabase.auth.getSession()
+    const accessToken = data.session?.access_token
+
+    if (!accessToken) {
+      throw new Error('Sessão expirada. Faça login novamente para executar ações de manutenção.')
+    }
+
+    return {
+      Authorization: `Bearer ${accessToken}`,
+      ...(anonKey ? { apikey: anonKey } : {})
+    }
+  }, [anonKey])
+
+  const loadStats = useCallback(async () => {
+    setLoading(true)
+    try {
+      const { data, error } = await supabase.rpc('get_upload_pipeline_stats')
+      if (error) throw error
+      setStats((data?.[0] || null) as PipelineStats | null)
+    } catch (err) {
+      console.warn('Erro ao carregar pipeline:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadStats()
+    const timer = setInterval(loadStats, 30000)
+    return () => clearInterval(timer)
+  }, [loadStats])
+
+  const runMaintenance = async (fnName: 'process-outbox' | 'reconcile-uploads') => {
+    setActionLoading(true)
+    setActionMessage(null)
+    try {
+      const headers = await getAuthHeaders()
+      const { data, error } = await supabase.functions.invoke(fnName, {
+        headers
+      })
+      if (error) throw error
+      setActionMessage(`${fnName} executado com sucesso.`)
+      if (data) {
+        console.info(`${fnName} result:`, data)
+      }
+      await loadStats()
+    } catch (err: any) {
+      setActionMessage(err?.message || `Falha ao executar ${fnName}.`)
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-2xl p-5 shadow-glass">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold text-neutral-800 text-lg">Monitor do Pipeline</h3>
+        <button
+          onClick={loadStats}
+          className="flex items-center gap-2 text-xs text-neutral-500 hover:text-neutral-700"
+          disabled={loading}
+        >
+          <RefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          Atualizar
+        </button>
+      </div>
+
+      <div className="flex flex-wrap gap-2 mb-4">
+        <button
+          onClick={() => runMaintenance('process-outbox')}
+          disabled={actionLoading}
+          className="px-3 py-2 text-xs font-semibold rounded-lg bg-accent-50 text-accent-700 hover:bg-accent-100 disabled:opacity-50"
+        >
+          Rodar process-outbox
+        </button>
+        <button
+          onClick={() => runMaintenance('reconcile-uploads')}
+          disabled={actionLoading}
+          className="px-3 py-2 text-xs font-semibold rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-50"
+        >
+          Rodar reconcile-uploads
+        </button>
+      </div>
+
+      {actionMessage && (
+        <div className="mb-3 text-xs text-neutral-600 bg-neutral-50 border border-neutral-100 rounded-lg px-3 py-2">
+          {actionMessage}
+        </div>
+      )}
+
+      {!stats ? (
+        <div className="text-sm text-neutral-500">Sem dados</div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="p-3 bg-neutral-50 rounded-xl">
+            <p className="text-xs text-neutral-500">Total</p>
+            <p className="text-lg font-bold text-neutral-900">{stats.total_jobs}</p>
+          </div>
+          <div className="p-3 bg-amber-50 rounded-xl">
+            <p className="text-xs text-amber-700">Pendentes</p>
+            <p className="text-lg font-bold text-amber-800">{stats.pending}</p>
+          </div>
+          <div className="p-3 bg-blue-50 rounded-xl">
+            <p className="text-xs text-blue-700">Enviando</p>
+            <p className="text-lg font-bold text-blue-800">{stats.uploading}</p>
+          </div>
+          <div className="p-3 bg-purple-50 rounded-xl">
+            <p className="text-xs text-purple-700">Enviados</p>
+            <p className="text-lg font-bold text-purple-800">{stats.uploaded}</p>
+          </div>
+          <div className="p-3 bg-emerald-50 rounded-xl">
+            <p className="text-xs text-emerald-700">Commitados</p>
+            <p className="text-lg font-bold text-emerald-800">{stats.committed}</p>
+          </div>
+          <div className="p-3 bg-red-50 rounded-xl">
+            <p className="text-xs text-red-700">Falhas</p>
+            <p className="text-lg font-bold text-red-800">{stats.failed}</p>
+          </div>
+          <div className="p-3 bg-neutral-100 rounded-xl">
+            <p className="text-xs text-neutral-600">Expirados</p>
+            <p className="text-lg font-bold text-neutral-800">{stats.expired}</p>
+          </div>
+          <div className="p-3 bg-accent-50 rounded-xl">
+            <p className="text-xs text-accent-700">Outbox</p>
+            <p className="text-lg font-bold text-accent-800">{stats.outbox_pending}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+type UploadJobRow = {
+  id: string
+  status: string
+  original_filename: string
+  object_path: string
+  size_bytes: number | null
+  created_at: string
+}
+
+function UploadJobsList() {
+  const [jobs, setJobs] = useState<UploadJobRow[]>([])
+  const [loading, setLoading] = useState(false)
+  const [status, setStatus] = useState<'ALL' | 'PENDING' | 'UPLOADING' | 'UPLOADED' | 'COMMITTED' | 'FAILED' | 'EXPIRED'>('ALL')
+
+  const formatBytes = (bytes?: number | null) => {
+    if (!bytes || bytes <= 0) return '-'
+    if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
+    if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+    return `${(bytes / 1024).toFixed(2)} KB`
+  }
+
+  const loadJobs = useCallback(async () => {
+    setLoading(true)
+    try {
+      let query = supabase
+        .from('upload_jobs')
+        .select('id,status,original_filename,object_path,size_bytes,created_at')
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      if (status !== 'ALL') query = query.eq('status', status)
+
+      const { data, error } = await query
+      if (error) throw error
+      setJobs((data || []) as UploadJobRow[])
+    } catch (err) {
+      console.warn('Erro ao carregar jobs:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [status])
+
+  useEffect(() => {
+    loadJobs()
+  }, [loadJobs])
+
+  return (
+    <div className="bg-white rounded-2xl p-5 shadow-glass">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold text-neutral-800 text-lg flex items-center gap-2">
+          <ListChecks className="w-5 h-5 text-primary-500" />
+          Jobs Recentes
+        </h3>
+        <button
+          onClick={loadJobs}
+          className="flex items-center gap-2 text-xs text-neutral-500 hover:text-neutral-700"
+          disabled={loading}
+        >
+          <RefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          Atualizar
+        </button>
+      </div>
+
+      <div className="flex items-center gap-3 mb-4">
+        <label className="text-xs text-neutral-500">Status</label>
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value as any)}
+          className="px-3 py-2 border border-neutral-200 rounded-lg text-sm"
+        >
+          <option value="ALL">Todos</option>
+          <option value="PENDING">PENDING</option>
+          <option value="UPLOADING">UPLOADING</option>
+          <option value="UPLOADED">UPLOADED</option>
+          <option value="COMMITTED">COMMITTED</option>
+          <option value="FAILED">FAILED</option>
+          <option value="EXPIRED">EXPIRED</option>
+        </select>
+      </div>
+
+      <div className="border border-neutral-100 rounded-xl overflow-hidden">
+        <div className="grid grid-cols-12 bg-neutral-50 text-xs font-semibold text-neutral-600 px-3 py-2">
+          <span className="col-span-3">Arquivo</span>
+          <span className="col-span-3">Status</span>
+          <span className="col-span-2">Tamanho</span>
+          <span className="col-span-4">Criado</span>
+        </div>
+        {loading ? (
+          <div className="p-6 text-center text-neutral-500 text-sm">Carregando...</div>
+        ) : jobs.length === 0 ? (
+          <div className="p-6 text-center text-neutral-500 text-sm">Nenhum job encontrado</div>
+        ) : (
+          <div className="divide-y divide-neutral-100">
+            {jobs.map((job) => (
+              <div key={job.id} className="grid grid-cols-12 px-3 py-2 text-sm">
+                <span className="col-span-3 text-neutral-800 truncate" title={job.original_filename}>{job.original_filename}</span>
+                <span className="col-span-3 text-neutral-600 font-semibold">{job.status}</span>
+                <span className="col-span-2 text-neutral-500">{formatBytes(job.size_bytes)}</span>
+                <span className="col-span-4 text-neutral-500">{new Date(job.created_at).toLocaleString('pt-BR')}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+type FunctionRunRow = {
+  id: number
+  function_name: string
+  status: 'success' | 'error'
+  details: Record<string, unknown>
+  created_at: string
+}
+
+function FunctionRunsList() {
+  const [runs, setRuns] = useState<FunctionRunRow[]>([])
+  const [loading, setLoading] = useState(false)
+  const [functionName, setFunctionName] = useState<'ALL' | 'process-outbox' | 'reconcile-uploads'>('ALL')
+  const [status, setStatus] = useState<'ALL' | 'success' | 'error'>('ALL')
+
+  const loadRuns = useCallback(async () => {
+    setLoading(true)
+    try {
+      let query = supabase
+        .from('function_runs')
+        .select('id,function_name,status,details,created_at')
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      if (functionName !== 'ALL') query = query.eq('function_name', functionName)
+      if (status !== 'ALL') query = query.eq('status', status)
+
+      const { data, error } = await query
+
+      if (error) throw error
+      setRuns((data || []) as FunctionRunRow[])
+    } catch (err) {
+      console.warn('Erro ao carregar logs de funcoes:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [functionName, status])
+
+  useEffect(() => {
+    loadRuns()
+  }, [loadRuns])
+
+  return (
+    <div className="bg-white rounded-2xl p-5 shadow-glass">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold text-neutral-800 text-lg flex items-center gap-2">
+          <Activity className="w-5 h-5 text-primary-500" />
+          Logs das Funcoes
+        </h3>
+        <button
+          onClick={loadRuns}
+          className="flex items-center gap-2 text-xs text-neutral-500 hover:text-neutral-700"
+          disabled={loading}
+        >
+          <RefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          Atualizar
+        </button>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <label className="text-xs text-neutral-500">Funcao</label>
+        <select
+          value={functionName}
+          onChange={(e) => setFunctionName(e.target.value as any)}
+          className="px-3 py-2 border border-neutral-200 rounded-lg text-sm"
+        >
+          <option value="ALL">Todas</option>
+          <option value="process-outbox">process-outbox</option>
+          <option value="reconcile-uploads">reconcile-uploads</option>
+        </select>
+        <label className="text-xs text-neutral-500">Status</label>
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value as any)}
+          className="px-3 py-2 border border-neutral-200 rounded-lg text-sm"
+        >
+          <option value="ALL">Todos</option>
+          <option value="success">success</option>
+          <option value="error">error</option>
+        </select>
+      </div>
+
+      <div className="border border-neutral-100 rounded-xl overflow-hidden">
+        <div className="grid grid-cols-12 bg-neutral-50 text-xs font-semibold text-neutral-600 px-3 py-2">
+          <span className="col-span-3">Funcao</span>
+          <span className="col-span-2">Status</span>
+          <span className="col-span-4">Detalhes</span>
+          <span className="col-span-3">Data</span>
+        </div>
+        {loading ? (
+          <div className="p-6 text-center text-neutral-500 text-sm">Carregando...</div>
+        ) : runs.length === 0 ? (
+          <div className="p-6 text-center text-neutral-500 text-sm">Sem logs ainda</div>
+        ) : (
+          <div className="divide-y divide-neutral-100">
+            {runs.map((run) => (
+              <div key={run.id} className="grid grid-cols-12 px-3 py-2 text-sm">
+                <span className="col-span-3 text-neutral-800">{run.function_name}</span>
+                <span className={`col-span-2 font-semibold ${run.status === 'error' ? 'text-red-600' : 'text-emerald-600'}`}>{run.status}</span>
+                <span className="col-span-4 text-neutral-600 truncate" title={JSON.stringify(run.details)}>
+                  {JSON.stringify(run.details)}
+                </span>
+                <span className="col-span-3 text-neutral-500">{new Date(run.created_at).toLocaleString('pt-BR')}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+type AuditItem = {
+  id: number
+  item_id: number
+  action: 'INSERT' | 'UPDATE' | 'DELETE'
+  field_name?: string | null
+  old_value?: string | null
+  new_value?: string | null
+  changed_at: string
+  changed_by?: string | null
+  user_email?: string | null
+  ip_address?: string | null
+}
+
+function AuditTrail() {
+  const [items, setItems] = useState<AuditItem[]>([])
+  const [loading, setLoading] = useState(false)
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [itemId, setItemId] = useState('')
+  const [action, setAction] = useState<'ALL' | 'INSERT' | 'UPDATE' | 'DELETE'>('ALL')
+
+  const PAGE_SIZE = 12
+
+  const loadAudit = useCallback(async () => {
+    setLoading(true)
+    try {
+      let query = supabase
+        .from('catalogo_audit')
+        .select('id,item_id,action,field_name,old_value,new_value,changed_at,changed_by,user_email,ip_address', { count: 'exact' })
+        .order('changed_at', { ascending: false })
+
+      if (itemId.trim()) query = query.eq('item_id', Number(itemId))
+      if (action !== 'ALL') query = query.eq('action', action)
+
+      const from = (page - 1) * PAGE_SIZE
+      const to = from + PAGE_SIZE - 1
+      query = query.range(from, to)
+
+      const { data, error, count } = await query
+      if (error) throw error
+      setItems((data || []) as AuditItem[])
+      setTotal(count || 0)
+    } catch (err) {
+      console.warn('Erro ao carregar auditoria:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [action, itemId, page])
+
+  useEffect(() => {
+    loadAudit()
+  }, [loadAudit])
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+
+  return (
+    <div className="bg-white rounded-2xl p-5 shadow-glass">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold text-neutral-800 text-lg flex items-center gap-2">
+          <History className="w-5 h-5 text-primary-500" />
+          Auditoria
+        </h3>
+        <span className="text-xs text-neutral-500">{total} registros</span>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <input
+          type="number"
+          value={itemId}
+          onChange={(e) => { setPage(1); setItemId(e.target.value) }}
+          placeholder="Filtrar por ID do item"
+          className="flex-1 px-3 py-2 border border-neutral-200 rounded-lg text-sm"
+        />
+        <select
+          value={action}
+          onChange={(e) => { setPage(1); setAction(e.target.value as any) }}
+          className="px-3 py-2 border border-neutral-200 rounded-lg text-sm"
+        >
+          <option value="ALL">Todas</option>
+          <option value="INSERT">INSERT</option>
+          <option value="UPDATE">UPDATE</option>
+          <option value="DELETE">DELETE</option>
+        </select>
+      </div>
+
+      <div className="border border-neutral-100 rounded-xl overflow-hidden">
+        <div className="grid grid-cols-12 bg-neutral-50 text-xs font-semibold text-neutral-600 px-3 py-2">
+          <span className="col-span-2">Data</span>
+          <span className="col-span-2">Item</span>
+          <span className="col-span-2">Ação</span>
+          <span className="col-span-3">Campo</span>
+          <span className="col-span-3">Valores</span>
+        </div>
+        {loading ? (
+          <div className="p-6 text-center text-neutral-500 text-sm">Carregando...</div>
+        ) : items.length === 0 ? (
+          <div className="p-6 text-center text-neutral-500 text-sm">Nenhum registro encontrado</div>
+        ) : (
+          <div className="divide-y divide-neutral-100">
+            {items.map((row) => (
+              <div key={row.id} className="grid grid-cols-12 px-3 py-2 text-sm">
+                <span className="col-span-2 text-neutral-600">{new Date(row.changed_at).toLocaleString('pt-BR')}</span>
+                <span className="col-span-2 font-medium text-neutral-800">#{row.item_id}</span>
+                <span className={`col-span-2 font-semibold ${row.action === 'DELETE' ? 'text-red-600' : row.action === 'INSERT' ? 'text-emerald-600' : 'text-amber-600'}`}>{row.action}</span>
+                <span className="col-span-3 text-neutral-700 truncate">{row.field_name || '-'}</span>
+                <span className="col-span-3 text-neutral-600 truncate">
+                  {row.old_value && row.new_value ? `${row.old_value} → ${row.new_value}` : row.new_value || row.old_value || '-'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between mt-4">
+        <button
+          onClick={() => setPage(p => Math.max(1, p - 1))}
+          disabled={page === 1}
+          className="px-3 py-2 text-sm rounded-lg border border-neutral-200 disabled:opacity-50"
+        >
+          Anterior
+        </button>
+        <span className="text-xs text-neutral-500">Pagina {page} de {totalPages}</span>
+        <button
+          onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+          disabled={page >= totalPages}
+          className="px-3 py-2 text-sm rounded-lg border border-neutral-200 disabled:opacity-50"
+        >
+          Proxima
+        </button>
+      </div>
     </div>
   )
 }

@@ -2,8 +2,10 @@ import { useState, useMemo, useEffect } from 'react'
 import { useWorkflowItems, useUpdateItem } from '@/hooks/useQueries'
 import { useTaxonomy, statusColors, statusKanbanOrder } from '@/hooks/useTaxonomy'
 import { CatalogoItem } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { Link } from 'react-router-dom'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
+import { toast } from 'sonner'
 import { GripVertical, FileImage, FileVideo, File, ChevronLeft, ChevronRight, Filter, Users, Eye } from 'lucide-react'
 
 type StatusColumn = { id: string; name: string; items: CatalogoItem[] }
@@ -12,38 +14,32 @@ export function WorkflowPage() {
   const { taxonomy } = useTaxonomy()
   const [filterResponsavel, setFilterResponsavel] = useState('')
   const [mobileColumnIndex, setMobileColumnIndex] = useState(0)
-  const [page, setPage] = useState(1)
   const pageSize = 600
-  const [allItems, setAllItems] = useState<CatalogoItem[]>([])
-  const [totalCount, setTotalCount] = useState(0)
+  const [realtimeEnabled, setRealtimeEnabled] = useState(false)
   
-  const { data, isLoading } = useWorkflowItems({ responsavel: filterResponsavel || undefined }, page, pageSize)
+  const { data, isLoading, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useWorkflowItems({ responsavel: filterResponsavel || undefined }, pageSize)
   const updateItem = useUpdateItem()
 
   useEffect(() => {
-    if (!data) return
-    setTotalCount(data.totalCount)
-    setAllItems(prev => {
-      if (page === 1) return data.items
-      const existing = new Set(prev.map(i => i.id))
-      const merged = [...prev]
-      data.items.forEach(item => {
-        if (!existing.has(item.id)) merged.push(item)
+    if (!realtimeEnabled) return
+    const channel = supabase.channel('workflow-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'catalogo_itens' }, () => {
+        refetch()
       })
-      return merged
-    })
-  }, [data, page])
+      .subscribe()
 
-  useEffect(() => {
-    setPage(1)
-    setAllItems([])
-  }, [filterResponsavel])
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [realtimeEnabled, refetch])
 
   const statusIdByName = useMemo(() => {
     const map = new Map<string, string>()
     taxonomy.statusOptions.forEach(s => map.set(s.name, s.id))
     return map
   }, [taxonomy.statusOptions])
+
+  const allItems = useMemo(() => data?.pages.flatMap(page => page.items) ?? [], [data])
 
   const columns = useMemo<StatusColumn[]>(() => {
     if (!allItems.length) return statusKanbanOrder.map(s => ({ id: s, name: s, items: [] }))
@@ -62,13 +58,27 @@ export function WorkflowPage() {
     const draggedItem = sourceCol?.items.find(i => i.id.toString() === draggableId)
     if (!draggedItem) return
 
-    updateItem.mutate({
-      id: draggedItem.id,
-      updates: {
-        status_id: statusIdByName.get(destination.droppableId),
-        updated_at: new Date().toISOString()
+    const nextStatusName = destination.droppableId
+    const nextStatusId = statusIdByName.get(nextStatusName)
+    if (!nextStatusId) {
+      toast.error('Status inválido para atualização')
+      return
+    }
+
+    updateItem.mutate(
+      {
+        id: draggedItem.id,
+        updates: {
+          status_id: nextStatusId,
+          status: nextStatusName,
+          updated_at: new Date().toISOString()
+        }
+      },
+      {
+        onSuccess: () => toast.success('Status atualizado'),
+        onError: () => toast.error('Falha ao atualizar status')
       }
-    })
+    )
   }
 
   const moveItemToStatus = (item: CatalogoItem, direction: 'next' | 'prev') => {
@@ -77,10 +87,21 @@ export function WorkflowPage() {
     if (newIndex < 0 || newIndex >= statusKanbanOrder.length) return
     
     const nextStatus = statusKanbanOrder[newIndex]
-    updateItem.mutate({
-      id: item.id,
-      updates: { status_id: statusIdByName.get(nextStatus), updated_at: new Date().toISOString() }
-    })
+    const nextStatusId = statusIdByName.get(nextStatus)
+    if (!nextStatusId) {
+      toast.error('Status inválido para atualização')
+      return
+    }
+    updateItem.mutate(
+      {
+        id: item.id,
+        updates: { status_id: nextStatusId, status: nextStatus, updated_at: new Date().toISOString() }
+      },
+      {
+        onSuccess: () => toast.success('Status atualizado'),
+        onError: () => toast.error('Falha ao atualizar status')
+      }
+    )
   }
 
   const getFileIcon = (tipo?: string) => {
@@ -101,8 +122,9 @@ export function WorkflowPage() {
   }
 
   const totalItems = columns.reduce((acc, col) => acc + col.items.length, 0)
+  const totalCount = data?.pages?.[0]?.totalCount ?? 0
   const currentColumn = columns[mobileColumnIndex]
-  const hasMore = totalItems < totalCount
+  const hasMore = !!hasNextPage && totalItems < totalCount
 
   return (
     <div className="max-w-full animate-fade-in">
@@ -120,6 +142,15 @@ export function WorkflowPage() {
               {taxonomy.responsaveis.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>
+          <label className="flex items-center gap-2 px-3 py-2.5 bg-white rounded-xl shadow-glass text-sm text-neutral-700">
+            <input
+              type="checkbox"
+              checked={realtimeEnabled}
+              onChange={(e) => setRealtimeEnabled(e.target.checked)}
+              className="accent-primary-600"
+            />
+            Realtime
+          </label>
         </div>
       </div>
 
@@ -150,7 +181,13 @@ export function WorkflowPage() {
                 {currentColumn?.items.map((item) => (
                   <div key={item.id} className="bg-white rounded-xl p-4 shadow-glass">
                     {item.arquivo_url && item.arquivo_tipo?.startsWith('image') ? (
-                      <img src={item.arquivo_url} alt={item.titulo} className="w-full h-32 object-cover rounded-lg mb-3" />
+                      <img
+                        src={item.arquivo_url}
+                        alt={item.titulo}
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-32 object-cover rounded-lg mb-3"
+                      />
                     ) : (
                       <div className="w-full h-32 bg-neutral-100 rounded-lg mb-3 flex items-center justify-center">{getFileIcon(item.arquivo_tipo)}</div>
                     )}
@@ -200,7 +237,13 @@ export function WorkflowPage() {
                                   <GripVertical className="w-4 h-4 text-neutral-300 mt-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
                                   <div className="flex-1 min-w-0">
                                     {item.arquivo_url && item.arquivo_tipo?.startsWith('image') ? (
-                                      <img src={item.arquivo_url} alt={item.titulo} className="w-full h-20 object-cover rounded-lg mb-2" />
+                                      <img
+                                        src={item.arquivo_url}
+                                        alt={item.titulo}
+                                        loading="lazy"
+                                        decoding="async"
+                                        className="w-full h-20 object-cover rounded-lg mb-2"
+                                      />
                                     ) : (
                                       <div className="w-full h-20 bg-gradient-to-br from-neutral-100 to-neutral-200 rounded-lg mb-2 flex items-center justify-center">{getFileIcon(item.arquivo_tipo)}</div>
                                     )}
@@ -224,10 +267,11 @@ export function WorkflowPage() {
           {hasMore && (
             <div className="mt-4 flex justify-center">
               <button
-                onClick={() => setPage(p => p + 1)}
-                className="px-6 py-3 bg-white border border-neutral-200 rounded-xl text-neutral-700 hover:bg-neutral-50 font-semibold"
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className="px-6 py-3 bg-white border border-neutral-200 rounded-xl text-neutral-700 hover:bg-neutral-50 font-semibold disabled:opacity-60"
               >
-                Carregar mais
+                {isFetchingNextPage ? 'Carregando...' : 'Carregar mais'}
               </button>
             </div>
           )}

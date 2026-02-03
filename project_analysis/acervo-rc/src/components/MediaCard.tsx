@@ -1,4 +1,4 @@
-import { useState, memo } from 'react'
+import { useState, memo, useEffect } from 'react'
 import { statusColors } from '@/hooks/useTaxonomy'
 import type { CatalogoItem } from '@/lib/supabase'
 import { FileImage, FileVideo, File, Play, ImageOff } from 'lucide-react'
@@ -12,11 +12,18 @@ interface MediaCardProps {
 export const MediaCard = memo(function MediaCard({ item }: MediaCardProps) {
   const navigate = useNavigate()
   const [imageError, setImageError] = useState(false)
+  const [imageLoading, setImageLoading] = useState(true)
   const statusClass = statusColors[item.status || ''] || 'bg-neutral-200 text-neutral-700'
   
   const isImage = item.arquivo_tipo?.startsWith('image')
   const isVideo = item.arquivo_tipo?.startsWith('video')
-  const hasValidUrl = item.arquivo_url && !imageError
+  const imageUrl = item.arquivo_url || item.thumbnail_url
+  const hasValidUrl = imageUrl && !imageError
+
+  useEffect(() => {
+    setImageLoading(true)
+    setImageError(false)
+  }, [imageUrl])
 
   // Gera cor de fundo baseada no titulo para placeholder
   const getPlaceholderColor = () => {
@@ -54,13 +61,21 @@ export const MediaCard = memo(function MediaCard({ item }: MediaCardProps) {
     >
       <div className="relative aspect-video bg-neutral-100 flex items-center justify-center overflow-hidden">
         {hasValidUrl && isImage ? (
-          <img
-            src={item.arquivo_url}
-            alt={item.titulo}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            onError={() => setImageError(true)}
-          />
-        ) : hasValidUrl && isVideo ? (
+          <>
+            {imageLoading && (
+              <div className="absolute inset-0 shimmer" aria-hidden="true" />
+            )}
+            <img
+              src={imageUrl}
+              alt={item.titulo}
+              loading="lazy"
+              decoding="async"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              onLoad={() => setImageLoading(false)}
+              onError={() => setImageError(true)}
+            />
+          </>
+        ) : (item.arquivo_url && isVideo) ? (
           <VideoThumbnail
             src={item.arquivo_url!}
             thumbnailUrl={item.thumbnail_url}

@@ -14,3 +14,22 @@ project_analysis/user_input_files/
 *.zip
 .vercel
 .env.production
+
+# Secrets
+cron_secret.txt
+
+# Generated lockfiles (pnpm is used)
+project_analysis/acervo-rc/package-lock.json
+
+# Supabase temp artifacts in nested project
+project_analysis/acervo-rc/supabase/.temp/
+
+# Font extras (keep only WOFF2 variáveis)
+project_analysis/acervo-rc/public/fonts/inter/extras/
+project_analysis/acervo-rc/public/fonts/inter/Inter.ttc
+project_analysis/acervo-rc/public/fonts/inter/InterVariable.ttf
+project_analysis/acervo-rc/public/fonts/inter/InterVariable-Italic.ttf
+project_analysis/acervo-rc/public/fonts/inter/help.txt
+project_analysis/acervo-rc/public/fonts/inter/web/inter.css
+project_analysis/acervo-rc/public/fonts/inter/web/Inter-*.woff2
+project_analysis/acervo-rc/public/fonts/inter/web/InterDisplay-*.woff2

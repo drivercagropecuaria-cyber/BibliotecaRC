@@ -1,8 +1,10 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { supabase } from '@/lib/supabase'
-import { generateFileName, getNamingRules, type NamingRule } from '@/lib/taxonomy'
+import { type NamingRule } from '@/lib/taxonomy'
 import { useTaxonomy } from '@/hooks/useTaxonomy'
+import { useNamingRules } from '@/hooks/useQueries'
+import { initUpload, finalizeUpload } from '@/hooks/useUpload'
 import { Upload, FileImage, FileVideo, File, Check, X, Loader2, AlertCircle, RotateCcw, Grid, List, CloudUpload, Sparkles, MapPin, Tag, Users, Settings, Camera, Image as ImageIcon, Video } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import * as tus from 'tus-js-client'
@@ -16,7 +18,8 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | und
 interface UploadedFile {
   file: File
   progress: number
-  tempPath?: string
+  objectPath?: string
+  jobId?: string
   url?: string
   error?: string
   status: 'pending' | 'uploading' | 'completed' | 'error'
@@ -28,83 +31,37 @@ interface UploadedFile {
 
 const MAX_RETRIES = 3
 
-async function uploadLargeFile(file: File, tempPath: string, onProgress: (progress: number) => void): Promise<string> {
+async function uploadLargeFile(file: File, objectPath: string, accessToken: string, onProgress: (progress: number) => void): Promise<string> {
   try {
     return await new Promise((resolve, reject) => {
+      const headers: Record<string, string> = {
+        authorization: `Bearer ${accessToken}`,
+        'x-upsert': 'false'
+      }
+      if (SUPABASE_ANON_KEY) headers.apikey = SUPABASE_ANON_KEY
+
       const upload = new tus.Upload(file, {
         endpoint: `${SUPABASE_URL}/storage/v1/upload/resumable`,
         retryDelays: [0, 1000, 3000],
-        headers: { authorization: `Bearer ${SUPABASE_ANON_KEY}`, 'x-upsert': 'false' },
+        headers,
         uploadDataDuringCreation: false,
         removeFingerprintOnSuccess: true,
-        metadata: { bucketName: 'acervo-files', objectName: tempPath, contentType: file.type, cacheControl: '3600' },
+        metadata: { bucketName: 'acervo-files', objectName: objectPath, contentType: file.type, cacheControl: '3600' },
         chunkSize: 5 * 1024 * 1024,
         onError: (error) => { console.error('TUS Error:', error); reject(error) },
         onProgress: (bytesUploaded, bytesTotal) => { onProgress(Math.round((bytesUploaded / bytesTotal) * 100)) },
-        onSuccess: () => resolve(tempPath),
+        onSuccess: () => resolve(objectPath),
       })
       upload.start()
     })
   } catch (tusError) {
     console.warn('TUS falhou, tentando upload padrao...', tusError)
     onProgress(10)
-    const { error } = await supabase.storage.from('acervo-files').upload(tempPath, file, { cacheControl: '3600', upsert: false })
+    const { error } = await supabase.storage.from('acervo-files').upload(objectPath, file, { cacheControl: '3600', upsert: false })
     if (error) throw error
     onProgress(100)
-    return tempPath
+    return objectPath
   }
-}
-
-function sanitize(str: string): string {
-  return (str || '').replace(/[^a-zA-Z0-9]/g, '').substring(0, 30)
-}
-
-function generateFinalPath(
-  form: any,
-  originalName: string,
-  index: number,
-  total: number,
-  rule: NamingRule | null,
-  namingData: Record<string, string>
-): string {
-  const ext = originalName.split('.').pop()?.toLowerCase() || 'bin'
-  const date = form.data_captacao?.replace(/-/g, '') || new Date().toISOString().slice(0, 10).replace(/-/g, '')
-  const area = sanitize(namingData.area_fazenda) || 'SemArea'
-  const ponto = sanitize(namingData.ponto)
-  const tipo = sanitize(namingData.tipo_projeto)
-  const titulo = sanitize(form.titulo) || 'Arquivo'
-  const folder = `${area}/${date}`
-
-  const fallbackParts = [area, ponto, tipo, titulo].filter(Boolean)
-  const seqNum = String(index + 1).padStart(3, '0')
-  const fallbackName = total > 1 ? `${fallbackParts.join('_')}_${seqNum}.${ext}` : `${fallbackParts.join('_')}.${ext}`
-
-  if (!rule) {
-    return `${folder}/${fallbackName}`
-  }
-
-  const generated = generateFileName(
-    rule,
-    {
-      area_fazenda: namingData.area_fazenda,
-      ponto: namingData.ponto,
-      tipo_projeto: namingData.tipo_projeto,
-      titulo: form.titulo,
-      data_captacao: form.data_captacao,
-      nucleo_pecuaria: namingData.nucleo_pecuaria,
-      nucleo_agro: namingData.nucleo_agro,
-      nucleo_operacoes: namingData.nucleo_operacoes,
-      responsavel: form.responsavel,
-      status: namingData.status,
-      extensao: ext,
-    } as Record<string, string>,
-    index,
-    total
-  )
-
-  const hasExtension = generated.toLowerCase().endsWith(`.${ext}`)
-  const fileName = hasExtension ? generated : `${generated}.${ext}`
-  return fileName.includes('/') ? fileName : `${folder}/${fileName}`
 }
 
 function formatFileSize(bytes: number): string {
@@ -132,6 +89,7 @@ export function UploadPage() {
   const [activeTab, setActiveTab] = useState('identificacao')
   const [isMobile, setIsMobile] = useState(false)
   const [namingRule, setNamingRule] = useState<NamingRule | null>(null)
+  const { data: namingRules = [] } = useNamingRules()
   const [form, setForm] = useState({
     titulo: '', descricao: '',
     area_fazenda_id: '', ponto_id: '', tipo_projeto_id: '', status_id: '', tema_principal_id: '',
@@ -155,14 +113,9 @@ export function UploadPage() {
   }, [])
 
   useEffect(() => {
-    let mounted = true
-    getNamingRules().then((rules) => {
-      if (!mounted) return
-      const defaultRule = rules.find(r => r.is_default) || rules[0] || null
-      setNamingRule(defaultRule)
-    })
-    return () => { mounted = false }
-  }, [])
+    const defaultRule = namingRules.find(r => r.is_default) || namingRules[0] || null
+    setNamingRule(defaultRule)
+  }, [namingRules])
 
   useEffect(() => {
     if (!form.status_id && taxonomy.statusOptions.length > 0) {
@@ -176,6 +129,18 @@ export function UploadPage() {
   const hasUploadedFiles = files.some(f => f.status === 'completed')
   const isUploading = files.some(f => f.status === 'uploading')
   const completedCount = files.filter(f => f.status === 'completed').length
+  const failedCount = files.filter(f => f.status === 'error').length
+  const hasPendingUploads = files.some(f => f.status === 'pending' || f.status === 'uploading')
+
+  useEffect(() => {
+    if (!hasPendingUploads) return
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasPendingUploads])
 
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     return (
@@ -192,18 +157,55 @@ export function UploadPage() {
   const overallProgress = totalSize > 0 ? Math.round((uploadedSize / totalSize) * 100) : 0
 
   const uploadFile = useCallback(async (file: File, index: number) => {
-    const cleanName = file.name.replace(/[^a-zA-Z0-9.]/g, '_')
-    const tempPath = `temp_${Date.now()}_${cleanName}`
+    const { data: sessionData } = await supabase.auth.getSession()
+    const accessToken = sessionData.session?.access_token
+    if (!accessToken) {
+      const message = 'Sessão expirada. Faça login novamente para enviar arquivos.'
+      setFiles(prev => prev.map((f, i) => i === index ? { ...f, status: 'error' as const, error: message } : f))
+      setError(message)
+      throw new Error(message)
+    }
+
+    const areaName = taxonomy.areasOptions.find(o => o.id === form.area_fazenda_id)?.name || 'sem-area'
+    let initData: { job_id: string; object_path: string }
+    try {
+      initData = await initUpload({
+        original_filename: file.name,
+        mime_type: file.type,
+        size_bytes: file.size,
+        area: areaName
+      })
+    } catch (err: any) {
+      const code = err?.context?.json?.error?.code || err?.context?.error?.code
+        const message = code === 'TOO_MANY_UPLOADS'
+          ? 'Muitos uploads simultâneos. Aguarde alguns arquivos concluírem e tente novamente.'
+          : code === 'TOO_MANY_REQUESTS'
+          ? 'Muitos uploads em pouco tempo. Aguarde alguns minutos e tente novamente.'
+          : code === 'FILE_TOO_LARGE'
+          ? 'Arquivo excede o limite permitido.'
+          : code === 'JOB_RATE_CHECK_FAILED'
+          ? 'Não foi possível validar o limite de uploads. Tente novamente.'
+          : err?.message || 'Falha ao iniciar upload. Verifique as credenciais do Supabase.'
+      setFiles(prev => prev.map((f, i) => i === index ? { ...f, status: 'error' as const, error: message } : f))
+      setError(message)
+      throw err
+    }
+    const objectPath = initData.object_path
     setFiles(prev => prev.map((f, i) => i === index ? { ...f, status: 'uploading' as const, progress: 0 } : f))
     try {
+      await supabase.from('upload_jobs').update({ status: 'UPLOADING' }).eq('id', initData.job_id)
+    } catch (err) {
+      console.warn('Nao foi possivel marcar upload como UPLOADING:', err)
+    }
+    try {
       if (file.size > TUS_THRESHOLD) {
-        await uploadLargeFile(file, tempPath, (progress) => { setFiles(prev => prev.map((f, i) => i === index ? { ...f, progress } : f)) })
+        await uploadLargeFile(file, objectPath, accessToken, (progress) => { setFiles(prev => prev.map((f, i) => i === index ? { ...f, progress } : f)) })
       } else {
         setFiles(prev => prev.map((f, i) => i === index ? { ...f, progress: 30 } : f))
-        const { error } = await supabase.storage.from('acervo-files').upload(tempPath, file, { cacheControl: '3600', upsert: false })
+        const { error } = await supabase.storage.from('acervo-files').upload(objectPath, file, { cacheControl: '3600', upsert: false })
         if (error) throw error
       }
-      const { data: { publicUrl } } = supabase.storage.from('acervo-files').getPublicUrl(tempPath)
+      const { data: { publicUrl } } = supabase.storage.from('acervo-files').getPublicUrl(objectPath)
       
       // Gerar e fazer upload do thumbnail para vídeos
       let thumbnailPath: string | undefined
@@ -212,7 +214,7 @@ export function UploadPage() {
         try {
           const thumbnailBlob = await generateVideoThumbnail(file)
           if (thumbnailBlob) {
-            thumbnailPath = `thumbnails/${tempPath.replace(/\.[^.]+$/, '.jpg')}`
+            thumbnailPath = `thumbnails/${objectPath.replace(/\.[^.]+$/, '.jpg')}`
             const { error: thumbError } = await supabase.storage.from('acervo-files').upload(thumbnailPath, thumbnailBlob, {
               contentType: 'image/jpeg',
               cacheControl: '3600',
@@ -228,13 +230,18 @@ export function UploadPage() {
         }
       }
       
-      setFiles(prev => prev.map((f, i) => i === index ? { ...f, progress: 100, status: 'completed' as const, url: publicUrl, tempPath, thumbnailPath, thumbnailUrl } : f))
-      return tempPath
+      setFiles(prev => prev.map((f, i) => i === index ? { ...f, progress: 100, status: 'completed' as const, url: publicUrl, objectPath, jobId: initData.job_id, thumbnailPath, thumbnailUrl } : f))
+      try {
+        await supabase.from('upload_jobs').update({ status: 'UPLOADED' }).eq('id', initData.job_id)
+      } catch (err) {
+        console.warn('Nao foi possivel marcar upload como UPLOADED:', err)
+      }
+      return objectPath
     } catch (err: any) {
       setFiles(prev => prev.map((f, i) => i === index ? { ...f, status: 'error' as const, error: err.message } : f))
       throw err
     }
-  }, [])
+  }, [form.area_fazenda_id, taxonomy.areasOptions])
 
   const retryUpload = useCallback(async (index: number) => {
     const fileData = files[index]
@@ -242,6 +249,19 @@ export function UploadPage() {
     setFiles(prev => prev.map((f, i) => i === index ? { ...f, status: 'pending' as const, error: undefined, retries: f.retries + 1, progress: 0 } : f))
     try { await uploadFile(fileData.file, index) } catch (err) { console.error('Retry failed:', err) }
   }, [files, uploadFile])
+
+  const retryAllFailed = useCallback(async () => {
+    for (let i = 0; i < files.length; i++) {
+      if (files[i].status === 'error') {
+        await retryUpload(i)
+      }
+    }
+  }, [files, retryUpload])
+
+  const clearCompleted = useCallback(() => {
+    files.forEach(f => { if (f.previewUrl) URL.revokeObjectURL(f.previewUrl) })
+    setFiles(prev => prev.filter(f => f.status !== 'completed'))
+  }, [files])
 
   const processFiles = useCallback(async (acceptedFiles: File[]) => {
     const validFiles: File[] = []
@@ -288,8 +308,8 @@ export function UploadPage() {
   const removeFile = async (index: number) => {
     const file = files[index]
     if (file.previewUrl) URL.revokeObjectURL(file.previewUrl)
-    if (file.tempPath) {
-      await supabase.storage.from('acervo-files').remove([file.tempPath])
+    if (file.objectPath) {
+      await supabase.storage.from('acervo-files').remove([file.objectPath])
       if (file.thumbnailPath) await supabase.storage.from('acervo-files').remove([file.thumbnailPath])
     }
     setFiles(prev => prev.filter((_, i) => i !== index))
@@ -307,66 +327,40 @@ export function UploadPage() {
     if (!form.titulo) { setError('Titulo e obrigatorio'); return }
     if (!hasUploadedFiles) { setError('Faca upload de pelo menos um arquivo antes de salvar'); return }
     setSaving(true)
-    const uploadedFiles = files.filter(f => f.status === 'completed' && f.tempPath)
+    const uploadedFiles = files.filter(f => f.status === 'completed' && f.jobId)
     setSaveProgress({ current: 0, total: uploadedFiles.length })
     try {
       for (let i = 0; i < uploadedFiles.length; i++) {
         setSaveProgress({ current: i + 1, total: uploadedFiles.length })
         const uf = uploadedFiles[i]
-        const getNameById = (options: Array<{ id: string; name: string }>, id?: string) =>
-          options.find(o => o.id === id)?.name || ''
-
-        const namingData = {
-          area_fazenda: getNameById(taxonomy.areasOptions, form.area_fazenda_id),
-          ponto: getNameById(taxonomy.pontosOptions, form.ponto_id),
-          tipo_projeto: getNameById(taxonomy.tiposProjetoOptions, form.tipo_projeto_id),
-          nucleo_pecuaria: getNameById(taxonomy.nucleosPecuariaOptions, form.nucleo_pecuaria_id),
-          nucleo_agro: getNameById(taxonomy.nucleosAgroOptions, form.nucleo_agro_id),
-          nucleo_operacoes: getNameById(taxonomy.nucleosOperacoesOptions, form.operacao_id),
-          status: getNameById(taxonomy.statusOptions, form.status_id),
-        }
-
-        const finalPath = generateFinalPath(form, uf.file.name, i, uploadedFiles.length, namingRule, namingData)
-        const { error: moveError } = await supabase.storage.from('acervo-files').move(uf.tempPath!, finalPath)
-        if (moveError) console.error('Move error:', moveError)
-        const { data: { publicUrl } } = supabase.storage.from('acervo-files').getPublicUrl(moveError ? uf.tempPath! : finalPath)
-        
-        // Mover thumbnail se existir
-        let finalThumbnailUrl: string | undefined = uf.thumbnailUrl
-        if (uf.thumbnailPath) {
-          const finalThumbPath = `thumbnails/${finalPath.replace(/\.[^.]+$/, '.jpg')}`
-          const { error: thumbMoveError } = await supabase.storage.from('acervo-files').move(uf.thumbnailPath, finalThumbPath)
-          if (!thumbMoveError) {
-            const { data: thumbData } = supabase.storage.from('acervo-files').getPublicUrl(finalThumbPath)
-            finalThumbnailUrl = thumbData.publicUrl
+        try {
+          await finalizeUpload(uf.jobId!, {
+            titulo: uploadedFiles.length > 1 ? `${form.titulo} (${i + 1})` : form.titulo,
+            descricao: form.descricao || null,
+            area_fazenda_id: form.area_fazenda_id || null,
+            ponto_id: form.ponto_id || null,
+            tipo_projeto_id: form.tipo_projeto_id || null,
+            nucleo_pecuaria_id: form.nucleo_pecuaria_id || null,
+            nucleo_agro_id: form.nucleo_agro_id || null,
+            operacao_id: form.operacao_id || null,
+            marca_id: form.marca_id || null,
+            evento_id: form.evento_id || null,
+            funcao_historica_id: form.funcao_historica_id || null,
+            tema_principal_id: form.tema_principal_id || null,
+            status_id: form.status_id || null,
+            capitulo_id: form.capitulo_id || null,
+            frase_memoria: form.frase_memoria || null,
+            responsavel: form.responsavel || null,
+            observacoes: form.observacoes || null,
+            data_captacao: form.data_captacao || null,
+            thumbnail_url: uf.thumbnailUrl || null,
+          })
+        } catch (finalizeError) {
+          if (uf.thumbnailPath) {
+            await supabase.storage.from('acervo-files').remove([uf.thumbnailPath])
           }
+          throw finalizeError
         }
-        const { error: insertError } = await supabase.from('catalogo_itens').insert({
-          titulo: uploadedFiles.length > 1 ? `${form.titulo} (${i + 1})` : form.titulo,
-          descricao: form.descricao || null,
-          area_fazenda_id: form.area_fazenda_id || null,
-          ponto_id: form.ponto_id || null,
-          tipo_projeto_id: form.tipo_projeto_id || null,
-          nucleo_pecuaria_id: form.nucleo_pecuaria_id || null,
-          nucleo_agro_id: form.nucleo_agro_id || null,
-          operacao_id: form.operacao_id || null,
-          marca_id: form.marca_id || null,
-          evento_id: form.evento_id || null,
-          funcao_historica_id: form.funcao_historica_id || null,
-          tema_principal_id: form.tema_principal_id || null,
-          status_id: form.status_id || null,
-          capitulo_id: form.capitulo_id || null,
-          frase_memoria: form.frase_memoria || null,
-          responsavel: form.responsavel || null,
-          observacoes: form.observacoes || null,
-          data_captacao: form.data_captacao || null,
-          arquivo_url: publicUrl,
-          arquivo_tipo: uf.file.type,
-          arquivo_nome: moveError ? uf.tempPath : finalPath,
-          arquivo_tamanho: uf.file.size,
-          thumbnail_url: finalThumbnailUrl || null,
-        })
-        if (insertError) throw insertError
       }
       setSuccess(true)
       setTimeout(() => navigate('/acervo'), 1500)
@@ -551,9 +545,27 @@ export function UploadPage() {
                 <p className="text-xs text-neutral-500">{formatFileSize(totalSize)}</p>
               </div>
             </div>
-            <div className="flex gap-1">
+            <div className="flex items-center gap-2">
+              {failedCount > 0 && (
+                <button
+                  onClick={retryAllFailed}
+                  className="px-3 py-2 rounded-lg bg-amber-50 text-amber-700 text-xs font-semibold hover:bg-amber-100"
+                >
+                  Reenviar falhas ({failedCount})
+                </button>
+              )}
+              {completedCount > 0 && (
+                <button
+                  onClick={clearCompleted}
+                  className="px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-semibold hover:bg-emerald-100"
+                >
+                  Limpar enviados ({completedCount})
+                </button>
+              )}
+              <div className="flex gap-1">
               <button onClick={() => setViewMode('grid')} className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-primary-100 text-primary-600' : 'text-neutral-400'}`}><Grid className="w-4 h-4" /></button>
               <button onClick={() => setViewMode('list')} className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-primary-100 text-primary-600' : 'text-neutral-400'}`}><List className="w-4 h-4" /></button>
+              </div>
             </div>
           </div>
           
@@ -577,7 +589,13 @@ export function UploadPage() {
                   {f.previewUrl ? <img src={f.previewUrl} alt={f.file.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center">{getFileIcon(f.file.type)}</div>}
                   {f.status === 'uploading' && <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center"><Loader2 className="w-8 h-8 text-white animate-spin" /><span className="text-white text-sm font-bold mt-2">{f.progress}%</span></div>}
                   {f.status === 'completed' && <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1.5 shadow-lg"><Check className="w-4 h-4 text-white" /></div>}
-                  {f.status === 'error' && <div className="absolute inset-0 bg-red-500/80 flex items-center justify-center"><AlertCircle className="w-8 h-8 text-white" /></div>}
+                  {f.status === 'error' && (
+                    <div className="absolute inset-0 bg-red-500/85 flex flex-col items-center justify-center px-2 text-center">
+                      <AlertCircle className="w-7 h-7 text-white mb-1" />
+                      <span className="text-white text-xs font-semibold">Falha no upload</span>
+                      {f.error && <span className="text-white/90 text-[10px] mt-1 line-clamp-2">{f.error}</span>}
+                    </div>
+                  )}
                   <button onClick={() => removeFile(i)} className="absolute top-2 left-2 bg-black/50 hover:bg-black/70 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity min-w-[32px] min-h-[32px] flex items-center justify-center"><X className="w-4 h-4 text-white" /></button>
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
                     <p className="text-white text-xs truncate">{f.file.name}</p>
@@ -594,6 +612,9 @@ export function UploadPage() {
                     <p className="font-medium text-neutral-900 truncate text-sm">{f.file.name}</p>
                     <p className="text-xs text-neutral-500">{formatFileSize(f.file.size)}</p>
                     {f.status === 'uploading' && <div className="mt-1.5 h-2 bg-neutral-200 rounded-full overflow-hidden"><div className="h-full bg-primary-500 transition-all duration-300" style={{ width: `${f.progress}%` }} /></div>}
+                    {f.status === 'error' && f.error && (
+                      <p className="text-xs text-red-600 mt-1 line-clamp-2">{f.error}</p>
+                    )}
                   </div>
                   {f.status === 'completed' && <Check className="w-6 h-6 text-green-500" />}
                   {f.status === 'uploading' && <Loader2 className="w-6 h-6 text-primary-500 animate-spin" />}
@@ -622,6 +643,11 @@ export function UploadPage() {
         <div className="p-5 lg:p-6">
           {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">{error}</div>}
           {success && <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm">{completedCount} itens salvos com sucesso!</div>}
+          {failedCount > 0 && (
+            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm">
+              Existem {failedCount} arquivo{failedCount > 1 ? 's' : ''} com falha. Use “Reenviar falhas” antes de salvar.
+            </div>
+          )}
           {saving && (
             <div className="mb-4 p-3 bg-accent-50 border border-accent-200 rounded-xl">
               <div className="flex justify-between mb-2">

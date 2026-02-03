@@ -78,8 +78,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    // Evitar inicialização automática de sessão para reduzir erros de lock
-    setLoading(false)
+    let mounted = true
+
+    const initSession = async () => {
+      const { data } = await supabase.auth.getSession()
+      if (!mounted) return
+      setSession(data.session)
+      setUser(data.session?.user ?? null)
+
+      if (data.session?.user?.id) {
+        await fetchProfile(data.session.user.id, data.session.user.email || '')
+      }
+
+      setLoading(false)
+    }
+
+    initSession()
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
+      if (import.meta.env.DEV) {
+        console.info('[Auth]', event)
+      }
+
+      setSession(nextSession)
+      setUser(nextSession?.user ?? null)
+
+      if (nextSession?.user?.id) {
+        await fetchProfile(nextSession.user.id, nextSession.user.email || '')
+      } else {
+        setProfile(null)
+        setProfileLoaded(false)
+      }
+    })
+
+    return () => {
+      mounted = false
+      authListener.subscription.unsubscribe()
+    }
   }, [])
 
   const signIn = async (email: string, password: string) => {
@@ -92,36 +127,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error as Error | null }
   }
 
-  const signUp = async (email: string, password: string, nome?: string) => {
-    try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
-      if (!supabaseUrl) {
-        return { error: new Error('VITE_SUPABASE_URL não configurada') }
-      }
-      // Usar edge function para criar usuário já confirmado
-      const response = await fetch(`${supabaseUrl}/functions/v1/create-user`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, nome })
-      })
-      
-      const data = await response.json()
-      
-      if (!response.ok) {
-        return { error: new Error(data.error || 'Erro ao criar conta') }
-      }
-      
-      // Fazer login automaticamente após criar
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-      if (!signInError && signInData?.user) {
-        setSession(signInData.session)
-        setUser(signInData.user)
-        await fetchProfile(signInData.user.id, signInData.user.email || '')
-      }
-      return { error: signInError as Error | null }
-    } catch (err: any) {
-      return { error: err as Error }
-    }
+  const signUp = async (_email: string, _password: string, _nome?: string) => {
+    return { error: new Error('Cadastro desativado. Solicite um administrador.') }
   }
 
   const signOut = async () => {

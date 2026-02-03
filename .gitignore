@@ -13,3 +13,4 @@ project_analysis/user_input_files/
 # Large archives
 *.zip
 .vercel
+.env.production

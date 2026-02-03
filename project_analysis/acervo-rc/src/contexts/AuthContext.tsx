@@ -78,51 +78,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    // Timeout de segurança para evitar loading infinito
+    // Evitar inicialização automática de sessão para reduzir erros de lock
     const timeout = setTimeout(() => {
       if (loading) {
         console.warn('Auth timeout - finalizando loading')
         setLoading(false)
       }
-    }, 5000)
+    }, 2000)
 
-    // Verificar sessão atual
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        await fetchProfile(session.user.id, session.user.email || '')
-      }
-      setLoading(false)
-    }).catch((err) => {
-      console.error('Erro ao obter sessão:', err)
-      setLoading(false)
-    })
-
-    // Escutar mudanças de auth
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session)
-        setUser(session?.user ?? null)
-        
-        if (session?.user) {
-          await fetchProfile(session.user.id, session.user.email || '')
-        } else {
-          setProfile(null)
-          setProfileLoaded(false)
-        }
-        setLoading(false)
-      }
-    )
+    setLoading(false)
 
     return () => {
       clearTimeout(timeout)
-      subscription.unsubscribe()
     }
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (!error && data?.user) {
+      setSession(data.session)
+      setUser(data.user)
+      await fetchProfile(data.user.id, data.user.email || '')
+    }
     return { error: error as Error | null }
   }
 
@@ -146,7 +123,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       // Fazer login automaticamente após criar
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+      if (!signInError && signInData?.user) {
+        setSession(signInData.session)
+        setUser(signInData.user)
+        await fetchProfile(signInData.user.id, signInData.user.email || '')
+      }
       return { error: signInError as Error | null }
     } catch (err: any) {
       return { error: err as Error }

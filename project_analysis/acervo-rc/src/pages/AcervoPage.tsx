@@ -100,7 +100,10 @@ export function AcervoPage() {
               <AlertTriangle className="w-5 h-5" />
               <p className="font-semibold">Não foi possível carregar os itens do acervo</p>
             </div>
-            <p className="text-sm text-neutral-600 mb-4">Verifique as permissões do banco ou a conexão com o Supabase.</p>
+            <p className="text-sm text-neutral-600 mb-2">Verifique as permissões do banco, a conexão com o Supabase ou se há dados cadastrados.</p>
+            <pre className="text-xs text-red-700 bg-red-50 rounded p-2 mb-2 overflow-x-auto">
+              {itemsError?.message || String(itemsError)}
+            </pre>
             <button
               onClick={() => (hasSearch ? refetchSearch() : refetchRecent())}
               className="px-4 py-2 rounded-lg bg-red-50 text-red-700 font-medium hover:bg-red-100"

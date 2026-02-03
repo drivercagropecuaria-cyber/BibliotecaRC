@@ -1,4 +1,8 @@
 {
+  "framework": "vite",
+  "buildCommand": "pnpm run build",
+  "installCommand": "pnpm install --prefer-offline",
+  "outputDirectory": "dist",
   "env": {
     "VITE_SUPABASE_URL": "https://uqktebrajtlxyzdhqqdv.supabase.co",
     "VITE_SUPABASE_ANON_KEY": "sb_publishable_AOIG4mYPryZgH9eslj8fcg_cT5SMFgO"

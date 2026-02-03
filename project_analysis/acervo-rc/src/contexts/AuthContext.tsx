@@ -79,18 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Evitar inicialização automática de sessão para reduzir erros de lock
-    const timeout = setTimeout(() => {
-      if (loading) {
-        console.warn('Auth timeout - finalizando loading')
-        setLoading(false)
-      }
-    }, 2000)
-
     setLoading(false)
-
-    return () => {
-      clearTimeout(timeout)
-    }
   }, [])
 
   const signIn = async (email: string, password: string) => {

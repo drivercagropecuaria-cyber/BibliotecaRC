@@ -21,7 +21,6 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 // Lazy load bibliotecas pesadas
-const loadXLSX = () => import('xlsx')
 const loadJSZip = () => import('jszip')
 
 // Componente de Card memoizado para evitar re-renders
@@ -85,7 +84,7 @@ export function LocalidadePage() {
   
   // Estados para exportação
   const [showExportMenu, setShowExportMenu] = useState(false)
-  const [exporting, setExporting] = useState<'excel' | 'zip' | 'csv' | null>(null)
+  const [exporting, setExporting] = useState<'zip' | 'csv' | null>(null)
   const [exportProgress, setExportProgress] = useState({ current: 0, total: 0, status: '' })
   const exportMenuRef = useRef<HTMLDivElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -194,43 +193,6 @@ export function LocalidadePage() {
 
     const { count } = await query
     return count || 0
-  }
-
-  // Exportar para Excel
-  const exportToExcel = async () => {
-    setExporting('excel')
-    setExportProgress({ current: 0, total: 1, status: 'Carregando biblioteca...' })
-    
-    try {
-      const total = await fetchFilteredCount()
-      if (total > MAX_EXPORT_ITEMS) {
-        const proceed = confirm(`Você está prestes a exportar ${total} itens. Isso pode ser lento. Deseja continuar?`)
-        if (!proceed) { setExporting(null); return }
-      }
-
-      const [XLSX, data] = await Promise.all([loadXLSX(), fetchAllFilteredItems()])
-      if (data.length === 0) { alert('Nenhum item para exportar'); setExporting(null); return }
-
-      setExportProgress({ current: 0, total: 1, status: 'Preparando planilha...' })
-      const exportData = data.map(item => ({
-        'ID': item.id, 'Titulo': item.titulo || '', 'Data Captacao': item.data_captacao || '',
-        'Area/Fazenda': item.area_fazenda || '', 'Ponto': item.ponto || '', 'Tipo Projeto': item.tipo_projeto || '',
-        'Status': item.status || '', 'Responsavel': item.responsavel || '', 'Tema Principal': item.tema_principal || '',
-        'Nucleo Pecuaria': item.nucleo_pecuaria || '', 'Nucleo Agro': item.nucleo_agro || '',
-        'Frase Memoria': item.frase_memoria || '', 'Link Arquivo': item.arquivo_url || '', 'Tipo Arquivo': item.arquivo_tipo || '',
-      }))
-
-      const ws = XLSX.utils.json_to_sheet(exportData)
-      const wb = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(wb, ws, localidadeName.slice(0, 31))
-      XLSX.writeFile(wb, `acervo_${localidadeName.toLowerCase().replace(/\s+/g, '-')}_${new Date().toISOString().slice(0, 10)}.xlsx`)
-      setExportProgress({ current: 1, total: 1, status: 'Concluído!' })
-    } catch (err) {
-      console.error('Erro ao exportar Excel:', err)
-      setExportProgress({ current: 0, total: 0, status: 'Erro ao exportar' })
-    } finally {
-      setTimeout(() => setExporting(null), 1500)
-    }
   }
 
   const exportToCsvServer = async () => {
@@ -449,11 +411,6 @@ export function LocalidadePage() {
                   <FileSpreadsheet className="w-5 h-5 text-blue-600" />
                   <div><p className="font-medium text-neutral-800">CSV (server-side)</p><p className="text-xs text-neutral-500">Exportação rápida no servidor</p></div>
                 </button>
-                <button onClick={() => { exportToExcel(); setShowExportMenu(false) }}
-                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 transition-colors text-left border-t border-neutral-100">
-                  <FileSpreadsheet className="w-5 h-5 text-green-600" />
-                  <div><p className="font-medium text-neutral-800">Planilha Excel</p><p className="text-xs text-neutral-500">Exportar metadados (.xlsx)</p></div>
-                </button>
                 <button onClick={() => { exportToZip(); setShowExportMenu(false) }}
                   className="w-full flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 transition-colors text-left border-t border-neutral-100">
                   <FolderArchive className="w-5 h-5 text-amber-600" />
@@ -465,9 +422,9 @@ export function LocalidadePage() {
             {exporting && (
               <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-neutral-100 z-50 p-4">
                 <div className="flex items-center gap-3 mb-3">
-                  {exporting === 'excel' ? <FileSpreadsheet className="w-5 h-5 text-green-600" /> : exporting === 'csv' ? <FileSpreadsheet className="w-5 h-5 text-blue-600" /> : <FolderArchive className="w-5 h-5 text-amber-600" />}
+                  {exporting === 'csv' ? <FileSpreadsheet className="w-5 h-5 text-blue-600" /> : <FolderArchive className="w-5 h-5 text-amber-600" />}
                   <span className="font-medium">
-                    {exporting === 'excel' ? 'Exportando Excel' : exporting === 'csv' ? 'Exportando CSV' : 'Exportando ZIP'}
+                    {exporting === 'csv' ? 'Exportando CSV' : 'Exportando ZIP'}
                   </span>
                 </div>
                 {exportProgress.total > 0 && (

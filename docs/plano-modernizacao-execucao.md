@@ -126,3 +126,4 @@ Checklist:
 - [ ] Sem duplicidade excessiva de requests.
 - [x] Cadastro público desativado (apenas admin cria usuários).
 - [x] Pasta supabase secundária marcada como não-oficial.
+- [x] Exportação Excel removida (xlsx).

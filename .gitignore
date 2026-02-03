@@ -1,0 +1,14 @@
+# Supabase temp
+supabase/.temp/
+
+# Supabase CLI binaries
+tools/supabase/
+
+# Screenshots and user input artifacts
+.browser_screenshots/
+project_analysis/.browser_screenshots/
+user_input_files/
+project_analysis/user_input_files/
+
+# Large archives
+*.zip

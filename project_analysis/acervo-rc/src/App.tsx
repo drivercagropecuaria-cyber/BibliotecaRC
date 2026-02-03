@@ -4,6 +4,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Layout } from './components/Layout'
 import { PageLoader } from './components/PageLoader'
+import { supabaseConfigError } from './lib/supabase'
 
 // Lazy load das páginas - Code Splitting para reduzir bundle inicial
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })))
@@ -17,6 +18,17 @@ const EditItemPage = lazy(() => import('./pages/EditItemPage').then(m => ({ defa
 const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })))
 
 function App() {
+  if (supabaseConfigError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-neutral-50 p-6">
+        <div className="max-w-lg w-full bg-white rounded-2xl shadow-glass p-6 text-center">
+          <h1 className="text-xl font-bold text-neutral-900 mb-2">Configuração ausente</h1>
+          <p className="text-neutral-600">As variáveis de ambiente do Supabase não foram carregadas. Atualize a página ou verifique a configuração do Vercel.</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <BrowserRouter>
       <AuthProvider>

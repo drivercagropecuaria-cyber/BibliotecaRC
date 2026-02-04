@@ -14,10 +14,10 @@ SECURITY DEFINER
 STABLE
 AS $$
   SELECT 
-    COALESCE(status, 'Sem status') as status,
+    COALESCE(status_nome, 'Sem status') as status,
     COUNT(*)::BIGINT as count
-  FROM catalogo_itens
-  GROUP BY status
+  FROM v_catalogo_completo
+  GROUP BY status_nome
   ORDER BY count DESC;
 $$;
 
@@ -29,10 +29,10 @@ SECURITY DEFINER
 STABLE
 AS $$
   SELECT 
-    COALESCE(area_fazenda, 'Sem área') as area_fazenda,
+    COALESCE(area_fazenda_nome, 'Sem área') as area_fazenda,
     COUNT(*)::BIGINT as count
-  FROM catalogo_itens
-  GROUP BY area_fazenda
+  FROM v_catalogo_completo
+  GROUP BY area_fazenda_nome
   ORDER BY count DESC
   LIMIT 10;
 $$;
@@ -45,10 +45,10 @@ SECURITY DEFINER
 STABLE
 AS $$
   SELECT 
-    COALESCE(tema_principal, 'Sem tema') as tema_principal,
+    COALESCE(tema_principal_nome, 'Sem tema') as tema_principal,
     COUNT(*)::BIGINT as count
-  FROM catalogo_itens
-  GROUP BY tema_principal
+  FROM v_catalogo_completo
+  GROUP BY tema_principal_nome
   ORDER BY count DESC
   LIMIT 10;
 $$;
@@ -67,9 +67,8 @@ STABLE
 AS $$
   SELECT 
     COUNT(*)::BIGINT as total_itens,
-    COUNT(*) FILTER (WHERE status IN ('Entrada (Bruto)', 'Em triagem'))::BIGINT as pendentes,
-    COUNT(*) FILTER (WHERE status = 'Aprovado')::BIGINT as aprovados,
-    COUNT(*) FILTER (WHERE status = 'Publicado')::BIGINT as publicados
-  FROM catalogo_itens;
+    COUNT(*) FILTER (WHERE status_nome IN ('Entrada (Bruto)', 'Em triagem'))::BIGINT as pendentes,
+    COUNT(*) FILTER (WHERE status_nome = 'Aprovado')::BIGINT as aprovados,
+    COUNT(*) FILTER (WHERE status_nome = 'Publicado')::BIGINT as publicados
+  FROM v_catalogo_completo;
 $$;
-;

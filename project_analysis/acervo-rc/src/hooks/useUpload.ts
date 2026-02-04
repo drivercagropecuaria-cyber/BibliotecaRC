@@ -16,8 +16,17 @@ export type InitUploadResponse = {
 const anonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim()
 
 async function getAuthHeaders() {
-  const { data } = await supabase.auth.getSession()
-  const accessToken = data.session?.access_token
+  let { data } = await supabase.auth.getSession()
+  let accessToken = data.session?.access_token
+
+  const expiresAt = data.session?.expires_at
+  const shouldRefresh = !!expiresAt && expiresAt * 1000 - Date.now() < 60000
+
+  if (!accessToken || shouldRefresh) {
+    const refresh = await supabase.auth.refreshSession()
+    accessToken = refresh.data.session?.access_token
+    data = refresh.data
+  }
 
   if (!accessToken) {
     throw new Error('Sessão expirada. Faça login novamente para enviar arquivos.')

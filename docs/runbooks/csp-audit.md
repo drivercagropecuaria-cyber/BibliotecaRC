@@ -11,13 +11,13 @@ Trecho (resumo):
 
 ## Recursos externos bloqueados
 
-- Google Fonts (fonts.googleapis.com / fonts.gstatic.com) é bloqueado pela CSP atual.
+- Google Fonts (fonts.googleapis.com / fonts.gstatic.com) permanece bloqueado pela CSP atual.
 
 ## Referências a Google Fonts no frontend
 
-- Import direto em [project_analysis/acervo-rc/src/index.css](project_analysis/acervo-rc/src/index.css).
+- Nenhuma referência encontrada. O projeto utiliza fontes locais em [project_analysis/acervo-rc/src/index.css](project_analysis/acervo-rc/src/index.css).
 
 ## Observações
 
-- O erro no /login é consistente com bloqueio de Google Fonts.
-- Recomenda-se self-host da fonte Inter (ver plano de execução).
+- O projeto já usa self-host da fonte Inter em /public/fonts/inter.
+- Se houver erro de fonte no /login, revalidar o cache do navegador/CDN.

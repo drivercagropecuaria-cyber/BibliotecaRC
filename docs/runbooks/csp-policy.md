@@ -12,6 +12,6 @@
 
 ## Checklist
 
-- [ ] Remover todas as referências a fonts.googleapis.com / fonts.gstatic.com.
-- [ ] Garantir que a fonte local esteja disponível em /fonts/inter/.
+- [x] Remover todas as referências a fonts.googleapis.com / fonts.gstatic.com.
+- [x] Garantir que a fonte local esteja disponível em /fonts/inter/.
 - [ ] Validar /login sem erro de CSP.

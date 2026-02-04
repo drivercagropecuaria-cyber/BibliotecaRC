@@ -115,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(data.session?.user ?? null)
 
         if (data.session?.user?.id) {
-          await fetchProfile(data.session.user.id, data.session.user.email || '')
+          void fetchProfile(data.session.user.id, data.session.user.email || '')
         }
 
         setLoading(false)
@@ -144,7 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(nextSession?.user ?? null)
 
       if (nextSession?.user?.id) {
-        await fetchProfile(nextSession.user.id, nextSession.user.email || '')
+        void fetchProfile(nextSession.user.id, nextSession.user.email || '')
       } else {
         setProfile(null)
         setProfileLoaded(false)
@@ -163,7 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!error && data?.user) {
       setSession(data.session)
       setUser(data.user)
-      await fetchProfile(data.user.id, data.user.email || '')
+      void fetchProfile(data.user.id, data.user.email || '')
     }
     return { error: error as Error | null }
   }

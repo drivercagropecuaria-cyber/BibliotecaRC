@@ -38,6 +38,11 @@ const isAbortError = (err: any) => {
   return name === 'AbortError' || /operation was aborted/i.test(message)
 }
 
+const isRangeNotSatisfiable = (err: any) => {
+  const status = err?.status || err?.code
+  return status === 416 || status === 'PGRST103'
+}
+
 // Hook para buscar localidades (AcervoPage)
 export function useLocalidades() {
   return useQuery({
@@ -238,7 +243,12 @@ export function useWorkflowItems(filters: { responsavel?: string }, pageSize: nu
       query = query.range(from, to)
 
       const { data, error, count } = await query
-      if (error) throw error
+      if (error) {
+        if (isRangeNotSatisfiable(error)) {
+          return { items: [] as CatalogoItem[], totalCount: count || 0, page: pageParam }
+        }
+        throw error
+      }
       return {
         items: (data || []) as CatalogoItem[],
         totalCount: count || 0,

@@ -84,6 +84,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true
+    const initTimeout = setTimeout(() => {
+      if (!mounted) return
+      setSession(null)
+      setUser(null)
+      setProfile(null)
+      setProfileLoaded(false)
+      setLoading(false)
+      if (import.meta.env.DEV) {
+        console.warn('[Auth] Timeout ao iniciar sessão. Forçando login.')
+      }
+    }, 8000)
 
     const initSession = async () => {
       try {
@@ -108,6 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         setLoading(false)
+        clearTimeout(initTimeout)
       } catch (err) {
         if (isInvalidRefreshToken(err)) {
           await supabase.auth.signOut()
@@ -117,6 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null)
         setProfileLoaded(false)
         setLoading(false)
+        clearTimeout(initTimeout)
       }
     }
 
@@ -140,6 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       mounted = false
+      clearTimeout(initTimeout)
       authListener.subscription.unsubscribe()
     }
   }, [])

@@ -16,26 +16,26 @@ STABLE
 AS $$
   WITH counts AS (
     SELECT 
-      ci.area_fazenda AS loc,
+      ci.area_fazenda_nome AS loc,
       COUNT(*) as total,
       COUNT(*) FILTER (WHERE ci.arquivo_tipo LIKE 'image%') as images,
       COUNT(*) FILTER (WHERE ci.arquivo_tipo LIKE 'video%') as videos
-    FROM v_catalogo_ativo ci
-    WHERE ci.area_fazenda IS NOT NULL AND ci.area_fazenda != ''
-    GROUP BY ci.area_fazenda
+    FROM v_catalogo_completo ci
+    WHERE ci.area_fazenda_nome IS NOT NULL AND ci.area_fazenda_nome != ''
+    GROUP BY ci.area_fazenda_nome
   ),
   covers AS (
     SELECT 
-      sub.area_fazenda AS loc,
+      sub.area_fazenda_nome AS loc,
       jsonb_build_object(
         'url', sub.arquivo_url,
         'type', CASE WHEN sub.arquivo_tipo LIKE 'image%' THEN 'image' ELSE 'video' END
       ) as cover_data
     FROM (
-      SELECT area_fazenda, arquivo_url, arquivo_tipo,
-             ROW_NUMBER() OVER (PARTITION BY area_fazenda ORDER BY created_at DESC) as rn
-      FROM v_catalogo_ativo
-      WHERE arquivo_url IS NOT NULL AND area_fazenda IS NOT NULL AND area_fazenda != ''
+      SELECT area_fazenda_nome, arquivo_url, arquivo_tipo,
+             ROW_NUMBER() OVER (PARTITION BY area_fazenda_nome ORDER BY created_at DESC) as rn
+      FROM v_catalogo_completo
+      WHERE arquivo_url IS NOT NULL AND area_fazenda_nome IS NOT NULL AND area_fazenda_nome != ''
     ) sub
     WHERE sub.rn <= 4
   ),

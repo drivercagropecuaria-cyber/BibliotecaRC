@@ -155,7 +155,10 @@ export function AcervoPage() {
               <AlertTriangle className="w-5 h-5" />
               <p className="font-semibold">Não foi possível carregar as localidades</p>
             </div>
-            <p className="text-sm text-neutral-600 mb-4">Verifique as permissões do banco ou a função get_localidades_stats().</p>
+            <p className="text-sm text-neutral-600 mb-2">Verifique as permissões do banco ou a função get_localidades_stats().</p>
+            <pre className="text-xs text-red-700 bg-red-50 rounded p-2 mb-2 overflow-x-auto">
+              {localidadesError?.message || String(localidadesError)}
+            </pre>
             <button
               onClick={() => refetchLocalidades()}
               className="px-4 py-2 rounded-lg bg-red-50 text-red-700 font-medium hover:bg-red-100"

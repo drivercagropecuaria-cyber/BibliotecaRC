@@ -8,7 +8,7 @@ const COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4'
 
 export function DashboardPage() {
   // React Query - cache automático, sem refetch desnecessário
-  const { data, isLoading: loading } = useDashboardMetrics()
+  const { data, isLoading: loading, error } = useDashboardMetrics()
   
   const metrics = data?.metrics || { total_itens: 0, pendentes: 0, aprovados: 0, publicados: 0 }
   const statusData = data?.statusData || []
@@ -53,6 +53,18 @@ export function DashboardPage() {
           <span>Nova Importacao</span>
         </Link>
       </div>
+
+      {error && (
+        <div className="mb-6 p-4 bg-white border border-red-200 rounded-2xl">
+          <div className="flex items-center gap-3 text-red-600 mb-2">
+            <AlertTriangle className="w-5 h-5" />
+            <p className="font-semibold">Falha ao carregar métricas do dashboard</p>
+          </div>
+          <pre className="text-xs text-red-700 bg-red-50 rounded p-2 overflow-x-auto">
+            {error?.message || String(error)}
+          </pre>
+        </div>
+      )}
 
       {metrics.pendentes > 0 && (
         <div className="mb-6 p-4 bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200 rounded-2xl flex items-center gap-4">

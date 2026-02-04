@@ -1,7 +1,7 @@
 -- Migration: backfill_catalogo_ids
 -- Preenche colunas *_id a partir dos nomes existentes (somente quando colunas/tabelas existirem)
 
-DO $$
+DO $do$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'catalogo_itens' AND column_name = 'area_fazenda')
      AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'areas_fazendas') THEN
@@ -15,9 +15,9 @@ BEGIN
         AND LOWER(TRIM(ci.area_fazenda)) = LOWER(TRIM(af.nome));
     $$;
   END IF;
-END $$;
+END $do$;
 
-DO $$
+DO $do$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'catalogo_itens' AND column_name = 'ponto')
      AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'pontos') THEN
@@ -31,9 +31,9 @@ BEGIN
         AND LOWER(TRIM(ci.ponto)) = LOWER(TRIM(p.nome));
     $$;
   END IF;
-END $$;
+END $do$;
 
-DO $$
+DO $do$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'catalogo_itens' AND column_name = 'tipo_projeto')
      AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'tipos_projeto') THEN
@@ -47,9 +47,9 @@ BEGIN
         AND LOWER(TRIM(ci.tipo_projeto)) = LOWER(TRIM(tp.nome));
     $$;
   END IF;
-END $$;
+END $do$;
 
-DO $$
+DO $do$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'catalogo_itens' AND column_name = 'status')
      AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'status_material') THEN
@@ -63,9 +63,9 @@ BEGIN
         AND LOWER(TRIM(ci.status)) = LOWER(TRIM(sm.nome));
     $$;
   END IF;
-END $$;
+END $do$;
 
-DO $$
+DO $do$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'catalogo_itens' AND column_name = 'tema_principal')
      AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'temas_principais') THEN
@@ -79,9 +79,9 @@ BEGIN
         AND LOWER(TRIM(ci.tema_principal)) = LOWER(TRIM(tp.nome));
     $$;
   END IF;
-END $$;
+END $do$;
 
-DO $$
+DO $do$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'catalogo_itens' AND column_name = 'evento')
      AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'eventos_principais') THEN
@@ -95,9 +95,9 @@ BEGIN
         AND LOWER(TRIM(ci.evento)) = LOWER(TRIM(ep.nome));
     $$;
   END IF;
-END $$;
+END $do$;
 
-DO $$
+DO $do$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'catalogo_itens' AND column_name = 'funcao_historica')
      AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'funcoes_historicas') THEN
@@ -111,9 +111,9 @@ BEGIN
         AND LOWER(TRIM(ci.funcao_historica)) = LOWER(TRIM(fh.nome));
     $$;
   END IF;
-END $$;
+END $do$;
 
-DO $$
+DO $do$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'catalogo_itens' AND column_name = 'capitulo')
      AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'capitulos_filme') THEN
@@ -127,9 +127,9 @@ BEGIN
         AND LOWER(TRIM(ci.capitulo)) = LOWER(TRIM(cf.nome));
     $$;
   END IF;
-END $$;
+END $do$;
 
-DO $$
+DO $do$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'catalogo_itens' AND column_name = 'nucleo_pecuaria')
      AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'nucleos_pecuaria') THEN
@@ -143,9 +143,9 @@ BEGIN
         AND LOWER(TRIM(ci.nucleo_pecuaria)) = LOWER(TRIM(np.nucleo));
     $$;
   END IF;
-END $$;
+END $do$;
 
-DO $$
+DO $do$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'catalogo_itens' AND column_name = 'nucleo_agro')
      AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'nucleos_agro') THEN
@@ -159,9 +159,9 @@ BEGIN
         AND LOWER(TRIM(ci.nucleo_agro)) = LOWER(TRIM(na.nucleo));
     $$;
   END IF;
-END $$;
+END $do$;
 
-DO $$
+DO $do$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'catalogo_itens' AND column_name = 'nucleo_operacoes')
      AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'operacoes_internas') THEN
@@ -175,9 +175,9 @@ BEGIN
         AND LOWER(TRIM(ci.nucleo_operacoes)) = LOWER(TRIM(oi.nucleo));
     $$;
   END IF;
-END $$;
+END $do$;
 
-DO $$
+DO $do$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'catalogo_itens' AND column_name = 'marca')
      AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'marca_valorizacao') THEN
@@ -191,4 +191,4 @@ BEGIN
         AND LOWER(TRIM(ci.marca)) = LOWER(TRIM(mv.nucleo));
     $$;
   END IF;
-END $$;
+END $do$;

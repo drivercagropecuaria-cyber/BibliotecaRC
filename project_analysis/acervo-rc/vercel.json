@@ -1,7 +1,7 @@
 {
   "framework": "vite",
-  "buildCommand": "pnpm run build",
-  "installCommand": "pnpm install --prefer-offline",
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
   "outputDirectory": "dist",
   "headers": [
     {
@@ -17,6 +17,7 @@
     }
   ],
   "rewrites": [
+    { "source": "/assets/(.*)", "destination": "/assets/$1" },
     { "source": "/favicon.ico", "destination": "/icons/icon-192x192.png" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]

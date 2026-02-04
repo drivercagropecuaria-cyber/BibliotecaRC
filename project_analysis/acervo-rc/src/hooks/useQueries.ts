@@ -32,13 +32,22 @@ export const queryKeys = {
   taxonomy: ['taxonomy'] as const,
 }
 
+const isAbortError = (err: any) => {
+  const name = err?.name || ''
+  const message = err?.message || ''
+  return name === 'AbortError' || /operation was aborted/i.test(message)
+}
+
 // Hook para buscar localidades (AcervoPage)
 export function useLocalidades() {
   return useQuery({
     queryKey: queryKeys.localidades,
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_localidades_stats')
-      if (error) throw error
+      if (error) {
+        if (isAbortError(error)) return []
+        throw error
+      }
       
       return (data || []).map((row: any) => ({
         name: row.area_fazenda,
@@ -129,7 +138,10 @@ export function useAcervoItems(search: string, limit = 12, enabled = true) {
           p_query: normalizedSearch,
           p_limit: limit
         })
-        if (error) throw error
+        if (error) {
+          if (isAbortError(error)) return []
+          throw error
+        }
         return (data || []) as CatalogoItem[]
       }
 

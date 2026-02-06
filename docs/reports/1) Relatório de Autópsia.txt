@@ -1,0 +1,162 @@
+1) Relatório de Autópsia
+1. Resumo Executivo
+
+
+2. Tech Stack Detectada
+
+Frontend: React + TypeScript + Vite; React Router; TanStack Query; Tailwind; Radix UI; drag-and-drop (hello-pangea/dnd); ícones (lucide-react).
+
+Integrações de dados: supabase-js (Auth/DB/Storage) + Realtime; upload resumível via tus-js-client (endpoint de Storage resumable).
+
+Backend (infra Supabase): Postgres (tabelas/views/RPC), Storage (bucket), Edge Functions (Deno).
+
+Documentação/planos: há um “plano mestre” descrevendo um pipeline de integridade com ledger/outbox e tarefas agendadas. 
+
+3. Mapa de Arquitetura
+
+Entry point: src/main.tsx → QueryClientProvider + AuthProvider + App.
+
+Roteamento: src/App.tsx organiza páginas (login, dashboard, upload, workflow/kanban, catálogo, detalhe do item, taxonomia).
+
+Camadas:
+
+src/lib/*: cliente Supabase, tipos e utilidades.
+
+src/hooks/*: leitura/mutações (TanStack Query) e orquestrações (ex.: upload).
+
+src/pages/*: telas e fluxo do usuário.
+
+Backend no repositório: há mais de um conjunto de supabase/ (funções/migrations) dentro do ZIP — isso cria ambiguidade de “fonte de verdade” sobre o que está realmente previsto para deploy (ponto importante de risco operacional).
+
+4. Funcionalidades Críticas (top 5 identificadas)
+
+Upload multi-arquivo com retomada (TUS) + criação de “job” e finalização de metadados.
+
+Cadastro/edição de item (metadados do catálogo + vínculo com mídia).
+
+Workflow Kanban (arrastar cards entre status e persistir atualização).
+
+Consulta de catálogo e detalhes via views (v_catalogo_completo) + filtros/paginação.
+
+Gestão de taxonomias (tipos/categorias/status/áreas etc.) consumidas por selects e joins no catálogo.
+
+5. Pontos de Atenção (áreas complexas/obscuras/críticas)
+
+Ambiguidade de backend no ZIP: funções/migrations aparecem em mais de um lugar; frontend referencia init-upload/finalize-upload, mas existe também um fluxo “create-user” separado — isso pode levar a deploy parcial/inconsistente.
+
+Autenticação/sessão frágil para operações longas: src/lib/supabase.ts está com persistSession: false e autoRefreshToken: false (alto risco de expiração durante uploads longos e inconsistência de identidade).
+
+Chamada de Edge Function com header de Authorization suspeito: src/hooks/useUpload.ts envia Authorization: Bearer ${anonKey} (não um token de usuário), enquanto o plano descreve validação de JWT do usuário nas Edge Functions. 
+
+Criação de usuário por endpoint exposto: há uma função create-user com CORS aberto e sem um controle explícito de autorização (risco de abuso).
+
+Integridade do upload (lixo/orfandade): há mecanismos de “job” e limpeza no plano (ledger/outbox + reconciliação), mas a implementação atual ainda deixa cenários de “arquivo subiu / banco falhou” com resíduos (especialmente thumbnails).
+
+Contexto Carregado: Estou pronto para operar no RC Acervo.
+
+2) Relatório Técnico de Integridade
+1. Diagrama Mental do Fluxo de Dados (passo a passo)
+
+Abaixo está o caminho “fim a fim” (do formulário até o banco), conforme o código e a arquitetura pretendida no plano:
+
+Usuário preenche o “Novo Item” e seleciona arquivos (src/pages/UploadPage.tsx).
+
+Para cada arquivo, o frontend chama init-upload via src/hooks/useUpload.ts (função initUpload) para receber job_id e object_path.
+
+O plano descreve isso como criação do ledger upload_jobs antes do upload físico, para rastreabilidade e reconciliação. 
+
+O frontend inicia TUS (new tus.Upload(...)) e envia o binário para o endpoint /storage/v1/upload/resumable (Storage resumable).
+
+Ao completar o upload, o frontend tenta atualizar o job no banco (status UPLOADED) e registra uploaded_at.
+
+Ao final, o frontend chama finalize-upload (um “commit”) com job_id, paths e metadados para gravar no banco (tabelas de catálogo e mídia).
+
+O plano exige que a finalização seja atômica (RPC transacional) e gere outbox para pós-processamento. 
+
+No desenho do plano: um job agendado (process-outbox) consome outbox_events e um reconcilidor (reconcile-uploads) expira e limpa resíduos antigos. 
+
+O frontend consulta o catálogo via v_catalogo_completo (TanStack Query) e o workflow via listas agrupadas por status; mudanças deveriam refletir imediatamente via optimistic UI + invalidações + realtime. 
+
+2. Matriz de Riscos de Integridade (onde pode quebrar “silenciosamente”)
+
+R1 — Upload físico ok, “marcação” do job falha
+
+Onde: UploadPage.tsx (update em upload_jobs após onSuccess).
+
+Efeito: finalize-upload pode rejeitar por status inesperado; arquivo fica no Storage sem commit no catálogo.
+
+Por que é “silencioso”: o código registra warning, mas permite seguir fluxo.
+
+R2 — finalize-upload falha após upload completo
+
+Efeito: arquivo fica “pendente”; depende de reconciliação posterior para apagar.
+
+Observação: o plano prevê reconciliação/expiração, mas isso é “eventual”, não rollback imediato. 
+
+R3 — Thumbnails órfãs
+
+Onde: UploadPage.tsx faz upload de thumbnail no client.
+
+Efeito: se o commit falhar e o reconcilidor só apagar o object_path principal, a thumbnail pode ficar sobrando (não vinculada a job/outbox).
+
+R4 — “Authorization” incompatível com validação de usuário
+
+Onde: useUpload.ts envia Authorization: Bearer ${anonKey} (não é token de sessão do usuário).
+
+Efeito: Edge Function pode identificar “sem usuário” e cair em fallback (ou falhar); isso altera RLS/ownership e pode corromper autoria.
+
+Conflito direto com o desenho de validação JWT descrito no plano. 
+
+R5 — Sessão pode expirar no meio do pipeline
+
+Onde: src/lib/supabase.ts desliga persistência e refresh.
+
+Efeito: TUS pode até terminar (se anônimo), mas DB/Functions podem falhar depois; risco de “meio commit”.
+
+R6 — Repositório com múltiplos “backends” (supabase/)
+
+Efeito: migrations/funções divergentes → views/RPC esperadas pelo frontend podem não existir no banco real → falhas intermitentes e difíceis de diagnosticar.
+
+R7 — Criação de usuário via função exposta
+
+Onde: supabase/functions/create-user/index.ts (CORS “*” e sem um gate de autenticação/segredo no request).
+
+Efeito: criação indevida de contas e poluição do sistema.
+
+3. Avaliação da Lógica de Sincronização (frontend ↔ backend)
+
+TanStack Query (boas intenções): existe useUpdateItem com onMutate/rollback e invalidações ao final (src/hooks/useQueries.ts).
+
+Brecha prática no Workflow: WorkflowPage.tsx mantém um estado local (allItems) separado do cache do QueryClient, e as colunas renderizam a partir desse estado. Resultado: mesmo com optimistic update no cache, a UI pode não refletir instantaneamente a mudança, dependendo do refetch/realtime (efeito “precisa esperar”).
+
+Realtime: há assinatura em catalogo_itens e refetch(), o que ajuda consistência eventual; mas somado ao estado local duplicado, pode gerar sensação de atraso e “race” de renders.
+
+4. Veredito de Código (trechos específicos)
+
+Boas práticas / sinais fortes
+
+Modelo de commit transacional via RPC + outbox está bem alinhado com integridade (o desenho no plano é correto para evitar corrupção parcial). 
+
+Mutação com rollback (optimistic UI) está presente (src/hooks/useQueries.ts, bloco onMutate + onError + onSettled). Isso é consistente com a diretriz de UX do plano. 
+
+Precisa de refatoração urgente (risco alto)
+
+src/hooks/useUpload.ts (≈ linhas 20–45): envia Authorization com anonKey ao chamar init-upload/finalize-upload → incompatível com validação de JWT de usuário prevista.
+
+src/lib/supabase.ts (≈ linhas 12–25): persistSession: false e autoRefreshToken: false → alto risco de expiração e falha no meio do ciclo.
+
+src/pages/UploadPage.tsx (≈ linhas 34–55): TUS com header authorization: Bearer ${anonKey} → se o bucket/paths não estiverem rigidamente protegidos, abre porta para uploads fora de contexto; além disso, separa “upload” de “identidade do usuário”.
+
+src/pages/WorkflowPage.tsx (≈ linhas 16–40 e 70–130): estado allItems paralelo ao cache → pode quebrar a promessa de atualização imediata; risco de UI e backend divergirem temporariamente.
+
+supabase/functions/create-user/index.ts (≈ linhas 4–60): endpoint de criação de usuário com CORS aberto e sem “gate” explícito no request → risco de abuso e “poluição” do auth.
+
+5. Discrepâncias explícitas (TypeScript ↔ SQL / Repo ↔ Deploy esperado)
+
+Views esperadas pelo frontend (v_catalogo_completo, v_dashboard_metrics) aparecem como dependência direta em src/hooks/useQueries.ts, mas o conjunto de migrations presente no ZIP está fragmentado em múltiplas pastas — isto cria risco real de o banco não ter essas views no ambiente alvo (dependendo de qual pasta foi usada para migrar).
+
+Edge Functions esperadas: frontend chama init-upload/finalize-upload, porém existe também um conjunto distinto de funções (create-user, export-localidade) em outra árvore de supabase/functions. Se o deploy seguir a árvore “errada”, o frontend vai ficar chamando endpoints inexistentes.
+
+Contrato de autenticação: o plano pede validação de JWT de usuário nas Edge Functions 
+
+, mas o frontend manda anonKey em Authorization no upload orchestration — isso é uma discrepância de contrato que impacta diretamente integridade (ownership/RLS/auditoria).

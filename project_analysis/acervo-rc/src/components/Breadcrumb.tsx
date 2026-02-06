@@ -15,23 +15,23 @@ export function Breadcrumb({ items }: BreadcrumbProps) {
     <nav className="flex items-center gap-2 text-sm mb-6 overflow-x-auto pb-2">
       <Link
         to="/"
-        className="flex items-center gap-1 text-neutral-500 hover:text-primary-600 transition-colors flex-shrink-0"
+        className="flex items-center gap-1 text-rc-text-muted hover:text-rc-gold transition-colors flex-shrink-0"
       >
         <Home className="w-4 h-4" />
       </Link>
       
       {items.map((item, index) => (
         <div key={index} className="flex items-center gap-2 flex-shrink-0">
-          <ChevronRight className="w-4 h-4 text-neutral-400" />
+          <ChevronRight className="w-4 h-4 text-rc-text-muted" />
           {item.href ? (
             <Link
               to={item.href}
-              className="text-neutral-500 hover:text-primary-600 transition-colors font-medium"
+              className="text-rc-text-muted hover:text-rc-gold transition-colors font-medium"
             >
               {item.label}
             </Link>
           ) : (
-            <span className="text-neutral-900 font-semibold">{item.label}</span>
+            <span className="text-rc-text font-semibold">{item.label}</span>
           )}
         </div>
       ))}

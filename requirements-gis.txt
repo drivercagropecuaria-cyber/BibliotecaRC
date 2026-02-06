@@ -1,0 +1,37 @@
+# Dependências Python para Processamento GIS e Importação KML
+# Projeto: Mundo Virtual Villa Canabrava
+# Data: 2026-02-06
+
+# Core Data Processing
+pandas>=2.0.0,<3.0.0          # Análise de dados tabulares
+geopandas>=0.13.0,<1.0.0      # Processamento de dados geoespaciais
+shapely>=2.0.0,<3.0.0         # Operações geométricas
+pyproj>=3.6.0,<4.0.0          # Transformações de projeção cartográfica
+
+# Database
+sqlalchemy>=2.0.0,<3.0.0      # ORM e abstração de BD
+psycopg2-binary>=2.9.0        # Driver PostgreSQL
+alembic>=1.12.0               # Migrações de schema
+
+# XML/KML Parsing
+lxml>=4.9.0,<5.0.0            # Parser XML robusto
+defusedxml>=0.7.0             # Proteção contra XXE attacks
+
+# Utilities
+python-dotenv>=1.0.0          # Gerenciamento de variáveis de ambiente
+tqdm>=4.66.0                  # Barras de progresso
+click>=8.1.0                  # CLI utilities
+
+# Development
+pytest>=7.4.0                 # Testes unitários
+pytest-cov>=4.1.0             # Cobertura de testes
+black>=23.7.0                 # Formatação de código
+flake8>=6.0.0                 # Linting
+mypy>=1.4.0                   # Type checking
+
+# Optional: Data Visualization
+matplotlib>=3.7.0             # Gráficos estáticos
+folium>=0.14.0                # Mapas interativos (para exploração)
+
+# Optional: PostGIS-specific
+geoalchemy2>=0.14.0           # SQLAlchemy GIS extension

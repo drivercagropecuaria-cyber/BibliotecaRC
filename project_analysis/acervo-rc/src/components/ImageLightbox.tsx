@@ -158,7 +158,7 @@ export function ImageLightbox({ item, items = [], currentIndex = 0, onClose, onN
               {[
                 ['Titulo', item.titulo],
                 ['Area', item.area_fazenda],
-                ['Ponto', item.ponto],
+                ['Local', item.ponto],
                 ['Data', item.data_captacao ? new Date(item.data_captacao).toLocaleDateString('pt-BR') : null],
                 ['Tipo', item.tipo_projeto],
                 ['Status', item.status],

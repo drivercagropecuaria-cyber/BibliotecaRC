@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
@@ -10,6 +11,7 @@ export interface UserProfile {
   nome: string | null
   avatar_url: string | null
   role: UserRole
+  deleted_at?: string | null
 }
 
 interface AuthContextType {
@@ -24,6 +26,7 @@ interface AuthContextType {
   isAdmin: boolean
   isEditor: boolean
   canEdit: boolean
+  isActive: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -55,7 +58,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: userEmail,
           nome: userEmail.split('@')[0],
           avatar_url: null,
-          role: 'viewer'
+          role: 'viewer',
+          deleted_at: null
         }
         setProfile(defaultProfile)
         setProfileLoaded(true)
@@ -76,7 +80,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: userEmail,
         nome: userEmail.split('@')[0],
         avatar_url: null,
-        role: 'viewer'
+        role: 'viewer',
+        deleted_at: null
       })
       setProfileLoaded(true)
     }
@@ -194,15 +199,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   // Se usuário está autenticado, garantir acesso (app interno)
-  const isAdmin = profile?.role === 'admin'
-  const isEditor = profile?.role === 'editor' || isAdmin
+  const isActive = !profile?.deleted_at
+  const isAdmin = isActive && profile?.role === 'admin'
+  const isEditor = isActive && (profile?.role === 'editor' || isAdmin)
   const canEdit = isEditor
 
   return (
     <AuthContext.Provider value={{
       user, profile, session, loading,
       signIn, signUp, signOut, updateProfile,
-      isAdmin, isEditor, canEdit
+      isAdmin, isEditor, canEdit, isActive
     }}>
       {children}
     </AuthContext.Provider>

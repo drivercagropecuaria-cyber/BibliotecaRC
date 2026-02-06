@@ -1,0 +1,74 @@
+@layer components {
+  .rc-card {
+    background-color: var(--rc-surface-2);
+    border: 1px solid var(--rc-border);
+    border-radius: var(--rc-radius-lg);
+    box-shadow: var(--rc-shadow-card);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+  }
+
+  .rc-section {
+    background-color: var(--rc-surface);
+    border-radius: var(--rc-radius-lg);
+    border: 1px solid var(--rc-border);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+  }
+
+  .rc-button {
+    @apply inline-flex items-center justify-center gap-2 font-semibold uppercase tracking-wide transition-colors;
+    background-color: var(--rc-green);
+    color: #ffffff;
+    border-radius: var(--rc-radius-pill);
+    padding: 0.75rem 1.5rem;
+    box-shadow: 0 16px 30px rgba(26, 95, 26, 0.35);
+  }
+
+  .rc-button:hover {
+    background-color: var(--rc-green-dark);
+  }
+
+  .rc-button:focus-visible {
+    outline: 2px solid var(--rc-focus-ring);
+    outline-offset: 2px;
+  }
+
+  .rc-button-secondary {
+    @apply inline-flex items-center justify-center gap-2 font-semibold uppercase tracking-wide transition-colors;
+    background-color: transparent;
+    color: var(--rc-gold);
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    border-radius: var(--rc-radius-pill);
+    padding: 0.65rem 1.25rem;
+  }
+
+  .rc-button-secondary:hover {
+    background-color: rgba(212, 175, 55, 0.08);
+  }
+
+  .rc-input {
+    background-color: rgba(7, 9, 7, 0.7);
+    border: 1px solid var(--rc-border);
+    border-radius: var(--rc-radius-md);
+    padding: 0.75rem 1rem;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    color: var(--rc-text);
+  }
+
+  .rc-input:focus {
+    outline: none;
+    border-color: var(--rc-gold);
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
+  }
+
+  .rc-badge {
+    background: rgba(212, 175, 55, 0.12);
+    color: var(--rc-gold);
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    border-radius: 999px;
+    padding: 0.2rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+}

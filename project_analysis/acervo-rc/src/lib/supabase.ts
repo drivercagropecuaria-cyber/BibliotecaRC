@@ -67,12 +67,17 @@ export const supabase = createClient(
 
 export type CatalogoItem = {
   id: number
+  media_id?: string
   titulo: string
   descricao?: string
   arquivo_url?: string
   arquivo_tipo?: string
   arquivo_nome?: string
   arquivo_tamanho?: number
+  proxy_url?: string
+  proxy_mime_type?: string
+  proxy_filename?: string
+  proxy_size_bytes?: number
   thumbnail_url?: string
   area_fazenda?: string
   area_fazenda_id?: string

@@ -1,0 +1,54 @@
+/*
+  RC Acervo Design Tokens
+  Source of truth visual do RC Agropecuária.
+  Não alterar lógica do sistema: apenas identidade visual.
+*/
+
+:root {
+  /* Cores base */
+  --rc-bg: #080a08;
+  --rc-surface: rgba(12, 15, 12, 0.72);
+  --rc-surface-2: rgba(10, 12, 10, 0.86);
+  --rc-text: #f5f1e7;
+  --rc-text-muted: #d6cfbf;
+  --rc-black: #050705;
+  --rc-green: #1a5f1a;
+  --rc-green-dark: #124212;
+  --rc-green-light: #2e7d2e;
+  --rc-gold: #d4af37;
+  --rc-gray-50: rgba(11, 14, 11, 0.6);
+  --rc-gray-200: rgba(212, 175, 55, 0.15);
+  --rc-gray-500: #9b927d;
+  --rc-earth: #8b6914;
+  --rc-border: rgba(212, 175, 55, 0.28);
+  --rc-focus-ring: #d4af37;
+
+  /* Tipografia */
+  --rc-font-sans: 'Montserrat', 'Segoe UI', system-ui, sans-serif;
+  --rc-font-serif: 'Playfair Display', 'Times New Roman', serif;
+
+  /* Raios */
+  --rc-radius-sm: 8px;
+  --rc-radius-md: 14px;
+  --rc-radius-lg: 18px;
+  --rc-radius-pill: 25px;
+
+  /* Sombras */
+  --rc-shadow-card: 0 18px 40px rgba(0, 0, 0, 0.35);
+  --rc-shadow-soft: 0 10px 26px rgba(0, 0, 0, 0.25);
+
+  /* Espaçamento */
+  --rc-space-1: 4px;
+  --rc-space-2: 8px;
+  --rc-space-3: 12px;
+  --rc-space-4: 16px;
+  --rc-space-5: 24px;
+  --rc-space-6: 32px;
+  --rc-space-7: 40px;
+  --rc-space-8: 56px;
+
+  /* Gradientes (compatibilidade com utilitários existentes) */
+  --gradient-primary: linear-gradient(135deg, var(--rc-gold) 0%, var(--rc-earth) 100%);
+  --gradient-dark: linear-gradient(180deg, #080a08 0%, #0c100c 100%);
+  --gradient-accent: linear-gradient(135deg, rgba(212, 175, 55, 0.35) 0%, rgba(26, 95, 26, 0.25) 100%);
+}

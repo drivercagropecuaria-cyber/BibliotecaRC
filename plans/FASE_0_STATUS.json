@@ -1,0 +1,381 @@
+{
+  "metadata": {
+    "projeto": "Mundo Virtual Villa Canabrava",
+    "fase": "0 - Preparação e Fundação Documental",
+    "duracao": "4 semanas (5 Fevereiro - 27 Fevereiro 2026)",
+    "data_atualizacao": "2026-02-06T00:00:00Z",
+    "proximaAtualizacao": "2026-02-13T00:00:00Z",
+    "gestor_responsavel": "Roberth Naninne de Souza",
+    "tech_lead": "(A Designar)",
+    "status_geral": "INICIADO",
+    "progresso_percentual": 5,
+    "observacoes": "Arquitetura e documentação entregues. Aguardando aprovação de infraestrutura e designação de equipe."
+  },
+
+  "decisoes_pendentes": [
+    {
+      "id": "INFRA-001",
+      "titulo": "Infraestrutura Cloud vs On-Premises",
+      "descricao": "Escolher entre AWS ($5.550/mês) ou On-Premises para PostgreSQL",
+      "opcoes": [
+        {
+          "opcao": "AWS Cloud",
+          "custo_mensal": 5550,
+          "vantagens": ["Escalável", "Gerenciado", "Backup automático", "High availability"],
+          "desvantagens": ["Custo recorrente", "Dependência de fornecedor"]
+        },
+        {
+          "opcao": "On-Premises",
+          "custo_inicial": 8000,
+          "custo_mensal": 500,
+          "vantagens": ["Controle total", "Dados sensíveis local", "Menor custo longo prazo"],
+          "desvantagens": ["Administração", "Backup manual", "Escalabilidade limitada"]
+        }
+      ],
+      "recomendacao": "AWS (escalabilidade para 10k users, gerenciamento simplificado)",
+      "impacto": "Definir arquitetura, timeline, orçamento",
+      "status": "AGUARDANDO APROVAÇÃO",
+      "deadline": "2026-02-06",
+      "responsavel": "Roberth Naninne"
+    },
+    {
+      "id": "TEAM-001",
+      "titulo": "Designação de Equipe Fase 0",
+      "descricao": "Designar DBA e GIS Specialist",
+      "posicoes": [
+        {
+          "posicao": "DBA / Infrastructure",
+          "responsabilidades": ["Setup PostgreSQL", "Backup strategy", "Performance tuning"],
+          "tempo_alocado": "4 semanas, 50%"
+        },
+        {
+          "posicao": "GIS Specialist",
+          "responsabilidades": ["Validação KML", "Troubleshooting geo data", "QA importação"],
+          "tempo_alocado": "4 semanas, 40%"
+        }
+      ],
+      "status": "AGUARDANDO DESIGNAÇÃO",
+      "deadline": "2026-02-10",
+      "responsavel": "Roberth Naninne"
+    }
+  ],
+
+  "tarefas_por_semana": {
+    "semana_1": {
+      "periodo": "5-13 Fevereiro",
+      "tema": "Validação GIS e Organização de Acervo",
+      "progresso_percentual": 0,
+      "status": "PRONTO PARA INICIAR",
+      
+      "tarefas": {
+        "validacao_gis": {
+          "id": "T1-001",
+          "titulo": "Validação Completa de 252 Arquivos KML",
+          "descricao": "Executar validate_gis_data.py contra todos os KML",
+          "responsavel": "Tech Lead / GIS Specialist",
+          "tempo_estimado": "1.5 horas (execução) + 1 hora (análise)",
+          "status": "PRONTO (script pronto, aguarda execução)",
+          "checklist": [
+            "Setup Python environment (.venv, pip install -r requirements-gis.txt)",
+            "Executar: python tools/validate_gis_data.py",
+            "Revisar output: reports/GIS_VALIDATION_REPORT.json",
+            "Confirmar: Null_Fields < 5%, Overlap_Area = 0, Topology_Errors = 0"
+          ],
+          "criterio_aceite": "Relatório JSON gerado. 90%+ arquivos VALID ou WARNING (sem erros críticos).",
+          "arquivo_output": "reports/GIS_VALIDATION_REPORT.json",
+          "data_conclusao_planejada": "2026-02-07",
+          "data_conclusao_real": null,
+          "bloqueadores": null,
+          "notas": "Se houver erros críticos, usar tools/debug_kml.py para correção"
+        },
+
+        "organizacao_acervo": {
+          "id": "T1-002",
+          "titulo": "Criar Estrutura de Acervo Histórico",
+          "descricao": "Criar 5 categorias + 20+ subcategorias de diretórios",
+          "responsavel": "Curador de Acervo / Equipe de TI",
+          "tempo_estimado": "2 horas",
+          "status": "PRONTO (instruções em RUNBOOK)",
+          "checklist": [
+            "Executar RUNBOOK Passo 2.1 (PowerShell / Bash)",
+            "Criar 5 pastas principais (DOCUMENTOS, FOTOS, AUDIOVISUAL, MAPAS, OBJETOS_DIGITAIS)",
+            "Criar 20+ subpastas dentro delas",
+            "Copiar INDEX.csv template em cada pasta",
+            "Validar: Todos os diretórios existem e têm INDEX.csv"
+          ],
+          "criterio_aceite": "Estrutura completa. Todas as 20+ subpastas criadas. INDEX.csv em cada uma.",
+          "diretorio_base": "acervo/ACERVO_HISTORICO/",
+          "data_conclusao_planejada": "2026-02-10",
+          "data_conclusao_real": null,
+          "bloqueadores": null,
+          "notas": "Estrutura é blueprint. Catalogação dos itens começa Semana 2+."
+        }
+      },
+
+      "metricas_semana": {
+        "meta_conclusao_tarefas": "100%",
+        "progresso_atual": "0%",
+        "resultado": null
+      }
+    },
+
+    "semana_2": {
+      "periodo": "14-20 Fevereiro",
+      "tema": "Setup PostgreSQL e Importação KML",
+      "progresso_percentual": 0,
+      "status": "PLANEJADO",
+      
+      "tarefas": {
+        "setup_postgresql": {
+          "id": "T2-001",
+          "titulo": "Setup PostgreSQL + PostGIS",
+          "descricao": "Provisionar e configurar banco de dados",
+          "responsavel": "DBA",
+          "tempo_estimado": "1-2 horas (Docker) ou 4-6 horas (AWS)",
+          "status": "PLANEJADO",
+          "opcoes": [
+            {
+              "opcao": "Docker Local (Desenvolvimento)",
+              "tempo": "30 minutos",
+              "comandos": [
+                "docker-compose up -d",
+                "Validar: psql -U postgres -c 'SELECT 1'",
+                "PgAdmin: http://localhost:5050"
+              ]
+            },
+            {
+              "opcao": "AWS RDS (Produção)",
+              "tempo": "2-4 horas",
+              "especificacoes": {
+                "engine": "PostgreSQL 15",
+                "instance_type": "db.t4g.medium",
+                "storage": "100GB gp3",
+                "multi_az": true,
+                "backup_retention": "30 days"
+              }
+            }
+          ],
+          "checklist": [
+            "Provisionar PostgreSQL + PostGIS",
+            "Habilitar extensões (postgis, postgis_topology, pg_trgm, uuid-ossp)",
+            "Criar schemas (gis_data, museu_content, user_management)",
+            "Validar conexão: python -c 'from sqlalchemy import create_engine'",
+            "Health check: SELECT ST_AsText(ST_GeomFromText('POINT(0 0)'))"
+          ],
+          "criterio_aceite": "BD operacional. Schemas criados. Extensões habilitadas. Conexão testada.",
+          "data_conclusao_planejada": "2026-02-14",
+          "data_conclusao_real": null,
+          "bloqueadores": ["Decisão de infraestrutura (AWS vs On-Prem)"]
+        },
+
+        "import_kml_teste": {
+          "id": "T2-002",
+          "titulo": "Teste Importação KML (5 arquivos piloto)",
+          "descricao": "Executar import_kml_batch.py com subset para validar pipeline",
+          "responsavel": "Tech Lead / GIS Specialist",
+          "tempo_estimado": "45 minutos",
+          "status": "PLANEJADO",
+          "checklist": [
+            "Editar import_kml_batch.py: kml_files = sorted(kml_files)[:5]",
+            "Executar: python tools/import_kml_batch.py",
+            "Validar output: reports/KML_IMPORT_SUMMARY.json",
+            "SQL check: SELECT COUNT(*) FROM gis_data.features (deve ser ~200-500)",
+            "SQL check: SELECT * FROM gis_data.layers LIMIT 5"
+          ],
+          "criterio_aceite": "5 KML importados sem erros. Features visíveis em PostgreSQL.",
+          "arquivo_output": "reports/KML_IMPORT_SUMMARY.json",
+          "data_conclusao_planejada": "2026-02-15",
+          "data_conclusao_real": null,
+          "bloqueadores": ["PostgreSQL operacional (T2-001)"]
+        },
+
+        "import_kml_completo": {
+          "id": "T2-003",
+          "titulo": "Importação Completa de 252 KML",
+          "descricao": "Importar todos os arquivos KML para PostgreSQL",
+          "responsavel": "Tech Lead",
+          "tempo_estimado": "1-2 horas",
+          "status": "PLANEJADO",
+          "checklist": [
+            "Remover filtro [:5] do script",
+            "Executar: python tools/import_kml_batch.py",
+            "Monitorar output (deve levar 30-60 minutos)",
+            "Validar: SELECT COUNT(*) FROM gis_data.features (deve ser ~50k)",
+            "Validar: SELECT DISTINCT(category) FROM gis_data.features (deve ser 19 categorias)",
+            "Validar overlaps: SELECT ... FROM gis_data.features WHERE ST_Overlaps(...) (deve ser 0)",
+            "Gerado relatório: reports/KML_IMPORT_SUMMARY.json"
+          ],
+          "criterio_aceite": "252 KML importados. ~50k features em BD. 0 overlaps. 19 categorias mapeadas.",
+          "arquivo_output": "reports/KML_IMPORT_SUMMARY.json",
+          "data_conclusao_planejada": "2026-02-20",
+          "data_conclusao_real": null,
+          "bloqueadores": ["Teste importação bem-sucedido (T2-002)"]
+        }
+      },
+
+      "metricas_semana": {
+        "meta_conclusao_tarefas": "100%",
+        "progresso_atual": "0%",
+        "resultado": null
+      }
+    },
+
+    "semana_3": {
+      "periodo": "21-27 Fevereiro",
+      "tema": "Consolidação Documental e Validação Final",
+      "progresso_percentual": 0,
+      "status": "PLANEJADO",
+      
+      "tarefas": {
+        "consolidacao_documental": {
+          "id": "T3-001",
+          "titulo": "Consolidar Documentação Oficial",
+          "descricao": "Sincronizar documentação do BIBLIOTECA com documentação oficial",
+          "responsavel": "Tech Lead / Documentador",
+          "tempo_estimado": "1 hora",
+          "status": "PLANEJADO",
+          "checklist": [
+            "Copiar: 02_DOCUMENTO_IMPLEMENTACAO_ESTAGIOS_CRIACAO.md → docs/",
+            "Copiar: Scripts Python de análise GIS → tools/",
+            "Sincronizar: Naming rules e padrões de nomenclatura",
+            "Atualizar: README.md com referências oficiais",
+            "Commit: Git com mensagem descritiva"
+          ],
+          "criterio_aceite": "Documentação oficial integrada no repositório. Nenhuma redundância.",
+          "data_conclusao_planejada": "2026-02-21",
+          "data_conclusao_real": null
+        },
+
+        "validacao_integridade": {
+          "id": "T3-002",
+          "titulo": "Validação de Integridade Dados",
+          "descricao": "Rodar queries SQL de validação em PostgreSQL",
+          "responsavel": "DBA / GIS Specialist",
+          "tempo_estimado": "1 hora",
+          "status": "PLANEJADO",
+          "sql_queries": [
+            "SELECT COUNT(*) as total_features FROM gis_data.features;",
+            "SELECT category, COUNT(*) FROM gis_data.features GROUP BY category;",
+            "SELECT SUM(area_ha) FROM gis_data.features;",
+            "SELECT COUNT(*) FROM gis_data.features WHERE ST_IsValid(geometry) = false;",
+            "SELECT COUNT(*) FROM (SELECT ... ST_Overlaps(...)) WHERE ...; -- Should be 0"
+          ],
+          "criterio_aceite": "Todas as queries retornam resultados esperados. 0 geometrias inválidas. 0 overlaps.",
+          "data_conclusao_planejada": "2026-02-23",
+          "data_conclusao_real": null
+        }
+      },
+
+      "metricas_semana": {
+        "meta_conclusao_tarefas": "100%",
+        "progresso_atual": "0%",
+        "resultado": null
+      }
+    },
+
+    "semana_4": {
+      "periodo": "24-27 Fevereiro",
+      "tema": "Relatórios Finais e Aprovação GO",
+      "progresso_percentual": 0,
+      "status": "PLANEJADO",
+      
+      "tarefas": {
+        "relatorios_finais": {
+          "id": "T4-001",
+          "titulo": "Gerar Relatórios Finais",
+          "descricao": "Consolidar 3 relatórios de entrega",
+          "responsavel": "Tech Lead",
+          "tempo_estimado": "1 hora",
+          "status": "PLANEJADO",
+          "relatorios": [
+            {
+              "arquivo": "reports/GIS_VALIDATION_REPORT.json",
+              "conteudo": "Métricas de validação dos 252 KML",
+              "status": "Gerado em T1-001"
+            },
+            {
+              "arquivo": "reports/KML_IMPORT_SUMMARY.json",
+              "conteudo": "Resultado da importação em PostgreSQL",
+              "status": "Gerado em T2-003"
+            },
+            {
+              "arquivo": "reports/PHASE_0_COMPLETION_REPORT.md",
+              "conteudo": "Resumo executivo de conclusão de Fase 0",
+              "status": "A gerar"
+            }
+          ],
+          "criterio_aceite": "3 relatórios gerados. Enviados a Roberth.",
+          "data_conclusao_planejada": "2026-02-25"
+        },
+
+        "aprovacao_go": {
+          "id": "T4-002",
+          "titulo": "Aprovação GO/NO-GO para Fase 1",
+          "descricao": "Decisão final: prosseguir ou corrigir antes de Fase 1",
+          "responsavel": "Roberth Naninne (decisor)",
+          "tempo_estimado": "Reunião 1 hora",
+          "status": "PLANEJADO",
+          "checklist_aceite": [
+            "GIS_VALIDATION_REPORT: 90%+ VALID ou WARNING",
+            "KML_IMPORT_SUMMARY: 252 arquivos importados",
+            "Integridade de dados: 0 overlaps, 0 self-intersections",
+            "Acervo: Estrutura criada com INDEX.csv",
+            "Documentação: Consolidada e linkada",
+            "Equipe: DBA e GIS Specialist designados"
+          ],
+          "criterio_go": "Todos os itens acima atendidos → GO para Fase 1",
+          "data_conclusao_planejada": "2026-02-27",
+          "data_inicio_fase_1_planejada": "2026-03-06"
+        }
+      },
+
+      "metricas_semana": {
+        "meta_conclusao_tarefas": "100%",
+        "progresso_atual": "0%",
+        "resultado": null
+      }
+    }
+  },
+
+  "resumo_geral": {
+    "total_tarefas": 7,
+    "tarefas_completadas": 0,
+    "tarefas_em_progresso": 0,
+    "tarefas_pendentes": 7,
+    "bloqueadores_ativos": 2,
+    "progresso_percentual_total": 5,
+    "data_conclusao_planejada": "2026-02-27",
+    "data_inicio_fase_1": "2026-03-06"
+  },
+
+  "riscos_monitorados": [
+    {
+      "risco": "Dados KML inconsistentes",
+      "probabilidade": "MÉDIA",
+      "impacto": "ALTO",
+      "mitigacao": "Script de validação pronto. Correção via debug_kml.py",
+      "status": "MONITORADO"
+    },
+    {
+      "risco": "Atraso na designação de equipe",
+      "probabilidade": "MEDIA",
+      "impacto": "MEDIO",
+      "mitigacao": "Roberth pode fazer setup PostgreSQL sozinho (Docker)",
+      "status": "MONITORADO"
+    },
+    {
+      "risco": "Performance PostgreSQL com 50k features",
+      "probabilidade": "BAIXA",
+      "impacto": "MEDIO",
+      "mitigacao": "Índices GIST já criados. AWS RDS escala facilmente.",
+      "status": "MONITORADO"
+    }
+  ],
+
+  "proxima_revisao": {
+    "data": "2026-02-13",
+    "atividade": "Review Semana 1 - Validação GIS e Acervo",
+    "responsavel": "Roberth Naninne",
+    "atualizacao_esperada": "% de progresso de tarefas Semana 1"
+  }
+}

@@ -21,7 +21,7 @@ export const FolderCard = memo(function FolderCard({ name, slug, itemCount, imag
   return (
     <Link
       to={`/acervo/${slug}`}
-      className="group relative block overflow-hidden rounded-2xl bg-white shadow-glass hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+      className="group relative block overflow-hidden rc-card hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
     >
       {/* Cover Media Grid or Gradient Background */}
       <div className="aspect-[4/3] relative overflow-hidden">
@@ -52,11 +52,11 @@ export const FolderCard = memo(function FolderCard({ name, slug, itemCount, imag
             ))}
           </div>
         ) : videoCount > 0 ? (
-          <div className="w-full h-full bg-gradient-to-br from-purple-500 via-purple-600 to-purple-700 flex items-center justify-center">
+          <div className="w-full h-full bg-gradient-to-br from-[#1a1a1a] via-[#1f1f1f] to-[#2a2a2a] flex items-center justify-center">
             <Video className="w-20 h-20 text-white/30" />
           </div>
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-primary-400 via-primary-500 to-primary-600 flex items-center justify-center">
+          <div className="w-full h-full bg-gradient-to-br from-[#1a5f1a] via-[#2e7d2e] to-[#134a13] flex items-center justify-center">
             <Folder className="w-20 h-20 text-white/30" />
           </div>
         )}
@@ -94,7 +94,7 @@ export const FolderCard = memo(function FolderCard({ name, slug, itemCount, imag
       </div>
       
       {/* Hover Effect Border */}
-      <div className="absolute inset-0 border-2 border-transparent group-hover:border-primary-400/50 rounded-2xl transition-colors duration-300 pointer-events-none" />
+      <div className="absolute inset-0 border-2 border-transparent group-hover:border-[#d4af37]/50 rounded-2xl transition-colors duration-300 pointer-events-none" />
     </Link>
   )
 })

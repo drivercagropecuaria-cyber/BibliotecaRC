@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, memo } from 'react'
 import { Image as ImageIcon } from 'lucide-react'
 
+/* eslint-disable react-refresh/only-export-components */
+
 interface OptimizedImageProps {
   src: string
   alt: string

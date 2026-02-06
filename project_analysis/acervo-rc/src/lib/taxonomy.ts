@@ -77,17 +77,17 @@ export function getItemsByType(taxonomy: TaxonomyItem[], type: string, parentId?
 // Tipos de taxonomia
 export const TAXONOMY_TYPES = [
   { key: 'area', label: 'Areas / Fazendas', hasChildren: false },
-  { key: 'ponto', label: 'Pontos', hasChildren: false },
+  { key: 'ponto', label: 'Local', hasChildren: false },
   { key: 'tipo_projeto', label: 'Tipos de Projeto', hasChildren: false },
   { key: 'nucleo_pecuaria', label: 'Nucleos Pecuaria', hasChildren: false },
   { key: 'nucleo_agro', label: 'Nucleos Agro', hasChildren: false },
   { key: 'nucleo_operacoes', label: 'Nucleos Operacoes', hasChildren: false },
   { key: 'nucleo_marca', label: 'Nucleos Marca', hasChildren: false },
-  { key: 'evento', label: 'Eventos', hasChildren: false },
-  { key: 'funcao_historica', label: 'Funcoes Historicas', hasChildren: false },
+  { key: 'evento', label: 'Atividades', hasChildren: false },
+  { key: 'funcao_historica', label: 'Atividade Complementar', hasChildren: false },
   { key: 'tema_principal', label: 'Temas Principais', hasChildren: false },
   { key: 'status', label: 'Status', hasChildren: false },
-  { key: 'capitulo', label: 'Capitulos', hasChildren: false },
+  { key: 'capitulo', label: 'Estações do Ano', hasChildren: false },
   { key: 'responsavel', label: 'Responsaveis', hasChildren: false },
 ]
 

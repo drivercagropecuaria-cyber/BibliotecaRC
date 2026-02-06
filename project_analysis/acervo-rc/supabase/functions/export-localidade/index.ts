@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Edge function: exporta metadados do acervo em CSV (server-side)
 Deno.serve(async (req: Request) => {
   const corsHeaders = {

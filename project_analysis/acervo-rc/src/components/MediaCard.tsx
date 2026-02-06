@@ -4,6 +4,7 @@ import type { CatalogoItem } from '@/lib/supabase'
 import { FileImage, FileVideo, File, Play, ImageOff } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { VideoThumbnail } from './VideoThumbnail'
+import { withCacheBuster } from '@/lib/media'
 
 interface MediaCardProps {
   item: CatalogoItem
@@ -17,7 +18,8 @@ export const MediaCard = memo(function MediaCard({ item }: MediaCardProps) {
   
   const isImage = item.arquivo_tipo?.startsWith('image')
   const isVideo = item.arquivo_tipo?.startsWith('video')
-  const imageUrl = item.arquivo_url || item.thumbnail_url
+  const imageUrl = item.thumbnail_url || item.arquivo_url
+  const cacheKey = item.updated_at || item.created_at || item.media_id || item.id
   const hasValidUrl = imageUrl && !imageError
 
   useEffect(() => {
@@ -57,9 +59,9 @@ export const MediaCard = memo(function MediaCard({ item }: MediaCardProps) {
   return (
     <div
       onClick={() => navigate(`/item/${item.id}`)}
-      className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-200 cursor-pointer group overflow-hidden border border-neutral-100"
+      className="glass-card hover:shadow-[0_20px_40px_-24px_rgba(7,14,10,0.7)] transition-all duration-300 cursor-pointer group overflow-hidden hover:-translate-y-1"
     >
-      <div className="relative aspect-video bg-neutral-100 flex items-center justify-center overflow-hidden">
+      <div className="relative aspect-[4/5] bg-neutral-950/40 flex items-center justify-center overflow-hidden">
         {hasValidUrl && isImage ? (
           <>
             {imageLoading && (
@@ -70,14 +72,14 @@ export const MediaCard = memo(function MediaCard({ item }: MediaCardProps) {
               alt={item.titulo}
               loading="lazy"
               decoding="async"
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
               onLoad={() => setImageLoading(false)}
               onError={() => setImageError(true)}
             />
           </>
-        ) : (item.arquivo_url && isVideo) ? (
+        ) : ((item.proxy_url || item.arquivo_url) && isVideo) ? (
           <VideoThumbnail
-            src={item.arquivo_url!}
+            src={withCacheBuster(item.proxy_url || item.arquivo_url, cacheKey)}
             thumbnailUrl={item.thumbnail_url}
             className="w-full h-full"
             showPlayIcon={true}
@@ -87,39 +89,41 @@ export const MediaCard = memo(function MediaCard({ item }: MediaCardProps) {
         ) : (
           renderPlaceholder()
         )}
+
+        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent opacity-70 transition-opacity duration-300 group-hover:opacity-100" />
         
         {/* Status Badge */}
         {item.status && (
-          <span className={`absolute top-2 right-2 px-2.5 py-1 text-xs font-semibold rounded-full shadow-sm ${statusClass}`}>
+          <span className={`absolute top-3 right-3 px-2.5 py-1 text-[11px] font-semibold rounded-full shadow-sm ${statusClass}`}>
             {item.status}
           </span>
         )}
         
         {/* Tipo de arquivo badge */}
         {item.arquivo_tipo && (
-          <span className="absolute bottom-2 left-2 px-2 py-0.5 text-xs bg-black/60 text-white rounded backdrop-blur-sm">
+          <span className="absolute bottom-3 left-3 px-2 py-0.5 text-[11px] uppercase tracking-[0.2em] bg-black/60 text-white rounded backdrop-blur-sm">
             {isVideo ? 'Video' : isImage ? 'Imagem' : 'Documento'}
           </span>
         )}
       </div>
       
       <div className="p-4">
-        <h3 className="font-semibold text-neutral-900 truncate group-hover:text-primary-600 transition-colors text-sm lg:text-base">
+        <h3 className="font-semibold text-rc-text truncate group-hover:text-rc-gold transition-colors text-sm lg:text-base">
           {item.titulo}
         </h3>
-        <div className="flex items-center gap-2 mt-1.5 text-xs text-neutral-500">
+        <div className="flex items-center gap-2 mt-1.5 text-xs text-rc-text-muted">
           {item.data_captacao && (
             <span>{new Date(item.data_captacao).toLocaleDateString('pt-BR')}</span>
           )}
           {item.area_fazenda && (
             <>
-              {item.data_captacao && <span className="text-neutral-300">|</span>}
+              {item.data_captacao && <span className="text-rc-border">|</span>}
               <span className="truncate">{item.area_fazenda}</span>
             </>
           )}
         </div>
         {item.tema_principal && (
-          <span className="inline-block mt-2 px-2 py-0.5 text-xs bg-primary-50 text-primary-600 rounded-full truncate max-w-full">
+          <span className="rc-badge mt-2 truncate max-w-full">
             {item.tema_principal}
           </span>
         )}

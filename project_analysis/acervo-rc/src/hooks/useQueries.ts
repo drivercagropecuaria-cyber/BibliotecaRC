@@ -25,6 +25,7 @@ export const queryKeys = {
   dashboard: ['dashboard'] as const,
   namingRules: ['namingRules'] as const,
   acervoItems: (search?: string, limit?: number) => ['acervoItems', search, limit] as const,
+  globalSearch: (search?: string, onlyVideos?: boolean, page?: number, limit?: number) => ['globalSearch', search, onlyVideos, page, limit] as const,
   items: (localidade?: string, filters?: Record<string, string>, search?: string, page?: number) => 
     ['items', localidade, filters, search, page] as const,
   item: (id: string | number) => ['item', id] as const,
@@ -81,7 +82,7 @@ export function useDashboardMetrics() {
         supabase.rpc('count_by_area'),
         supabase.rpc('count_by_tema'),
         supabase.from('v_catalogo_completo')
-          .select('id,titulo,arquivo_url,arquivo_tipo,thumbnail_url,status:status_nome,area_fazenda:area_fazenda_nome,created_at')
+          .select('id,titulo,arquivo_url,proxy_url,arquivo_tipo,thumbnail_url,status:status_nome,area_fazenda:area_fazenda_nome,created_at')
           .order('created_at', { ascending: false })
           .limit(5),
         supabase.rpc('get_upload_pipeline_stats')
@@ -152,7 +153,7 @@ export function useAcervoItems(search: string, limit = 12, enabled = true) {
 
       const { data, error } = await supabase
         .from('v_catalogo_completo')
-        .select('id,titulo,arquivo_url,arquivo_tipo,thumbnail_url,status:status_nome,area_fazenda:area_fazenda_nome,tema_principal:tema_principal_nome,ponto:ponto_nome,data_captacao,created_at')
+        .select('id,titulo,arquivo_url,proxy_url,arquivo_tipo,thumbnail_url,status:status_nome,area_fazenda:area_fazenda_nome,tema_principal:tema_principal_nome,ponto:ponto_nome,data_captacao,created_at')
         .order('created_at', { ascending: false })
         .limit(limit)
 
@@ -164,6 +165,57 @@ export function useAcervoItems(search: string, limit = 12, enabled = true) {
   })
 }
 
+export function useGlobalSearchItems(params: {
+  searchTerm?: string
+  onlyVideos?: boolean
+  page?: number
+  limit?: number
+}) {
+  const {
+    searchTerm = '',
+    onlyVideos = true,
+    page = 1,
+    limit = 24,
+  } = params
+
+  const normalizedSearch = searchTerm.trim()
+
+  return useQuery({
+    queryKey: queryKeys.globalSearch(normalizedSearch, onlyVideos, page, limit),
+    queryFn: async () => {
+      let query = supabase
+        .from('v_catalogo_completo')
+        .select('id,titulo,arquivo_url,proxy_url,arquivo_tipo,thumbnail_url,status:status_nome,area_fazenda:area_fazenda_nome,tema_principal:tema_principal_nome,ponto:ponto_nome,created_at', { count: 'exact' })
+        .order('created_at', { ascending: false })
+
+      if (onlyVideos) query = query.ilike('arquivo_tipo', 'video/%')
+
+      if (normalizedSearch) {
+        query = applySearchFilter(query, normalizedSearch, [
+          'titulo',
+          'tema_principal_nome',
+          'ponto_nome',
+          'area_fazenda_nome',
+          'arquivo_tipo',
+          'arquivo_nome',
+        ])
+      }
+
+      const from = (page - 1) * limit
+      query = query.range(from, from + limit - 1)
+
+      const { data, count, error } = await query
+      if (error) throw error
+
+      return {
+        items: (data || []) as CatalogoItem[],
+        totalCount: count || 0,
+      }
+    },
+    staleTime: 30000,
+  })
+}
+
 // Hook para buscar itens de uma localidade com filtros
 const ITEMS_PER_PAGE = 24
 export function useLocalidadeItems(localidadeId: string, filters: Record<string, string>, search: string, page: number) {
@@ -171,7 +223,7 @@ export function useLocalidadeItems(localidadeId: string, filters: Record<string,
     queryKey: queryKeys.items(localidadeId, filters, search, page),
     queryFn: async () => {
       let query = supabase.from('v_catalogo_completo')
-        .select('id,titulo,arquivo_url,arquivo_tipo,thumbnail_url,status:status_nome,ponto:ponto_nome,tipo_projeto:tipo_projeto_nome,data_captacao,created_at', { count: 'exact' })
+        .select('id,titulo,arquivo_url,proxy_url,arquivo_tipo,thumbnail_url,status:status_nome,ponto:ponto_nome,tipo_projeto:tipo_projeto_nome,data_captacao,created_at', { count: 'exact' })
         .eq('area_fazenda_id', localidadeId)
         .order('created_at', { ascending: false })
       
@@ -216,7 +268,7 @@ export function useItem(id?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('v_catalogo_completo')
-        .select('id,titulo,descricao,arquivo_url,arquivo_tipo,arquivo_nome,arquivo_tamanho,thumbnail_url,area_fazenda:area_fazenda_nome,area_fazenda_id,ponto:ponto_nome,ponto_id,tipo_projeto:tipo_projeto_nome,tipo_projeto_id,nucleo_pecuaria:nucleo_pecuaria_nome,nucleo_pecuaria_id,nucleo_agro:nucleo_agro_nome,nucleo_agro_id,nucleo_operacoes:operacao_nome,operacao_id,marca:marca_nome,marca_id,evento:evento_nome,evento_id,funcao_historica:funcao_historica_nome,funcao_historica_id,tema_principal:tema_principal_nome,tema_principal_id,status:status_nome,status_id,capitulo:capitulo_nome,capitulo_id,frase_memoria,observacoes,responsavel,data_captacao,created_at,updated_at')
+        .select('id,media_id,titulo,descricao,arquivo_url,proxy_url,proxy_mime_type,proxy_filename,proxy_size_bytes,arquivo_tipo,arquivo_nome,arquivo_tamanho,thumbnail_url,area_fazenda:area_fazenda_nome,area_fazenda_id,ponto:ponto_nome,ponto_id,tipo_projeto:tipo_projeto_nome,tipo_projeto_id,nucleo_pecuaria:nucleo_pecuaria_nome,nucleo_pecuaria_id,nucleo_agro:nucleo_agro_nome,nucleo_agro_id,nucleo_operacoes:operacao_nome,operacao_id,marca:marca_nome,marca_id,evento:evento_nome,evento_id,funcao_historica:funcao_historica_nome,funcao_historica_id,tema_principal:tema_principal_nome,tema_principal_id,status:status_nome,status_id,capitulo:capitulo_nome,capitulo_id,frase_memoria,observacoes,responsavel,data_captacao,created_at,updated_at')
         .eq('id', id!)
         .single()
       if (error) throw error
@@ -233,7 +285,7 @@ export function useWorkflowItems(filters: { responsavel?: string }, pageSize: nu
     queryFn: async ({ pageParam = 1 }) => {
       let query = supabase
         .from('v_catalogo_completo')
-        .select('id,titulo,arquivo_url,arquivo_tipo,area_fazenda:area_fazenda_nome,responsavel,status:status_nome,status_id,updated_at', { count: 'exact' })
+        .select('id,titulo,arquivo_url,proxy_url,thumbnail_url,arquivo_tipo,area_fazenda:area_fazenda_nome,responsavel,status:status_nome,status_id,updated_at', { count: 'exact' })
         .order('updated_at', { ascending: false })
 
       if (filters.responsavel) query = query.eq('responsavel', filters.responsavel)
@@ -271,7 +323,8 @@ export function useUpdateItem() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string | number; updates: Partial<CatalogoItem> }) => {
-      const { data, error } = await supabase.from('catalogo_itens').update(updates).eq('id', id).select().single()
+      const { status, area_fazenda, ponto, tema_principal, ...serverUpdates } = updates as any
+      const { data, error } = await supabase.from('catalogo_itens').update(serverUpdates).eq('id', id).select().single()
       if (error) throw error
       return data
     },

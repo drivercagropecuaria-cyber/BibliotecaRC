@@ -16,14 +16,16 @@ const WorkflowPage = lazy(() => import('./pages/WorkflowPage').then(m => ({ defa
 const ItemDetailPage = lazy(() => import('./pages/ItemDetailPage').then(m => ({ default: m.ItemDetailPage })))
 const EditItemPage = lazy(() => import('./pages/EditItemPage').then(m => ({ default: m.EditItemPage })))
 const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })))
+const SearchPage = lazy(() => import('./pages/SearchPage').then(m => ({ default: m.SearchPage })))
+const WorkspacePage = lazy(() => import('./pages/WorkspacePage').then(m => ({ default: m.WorkspacePage })))
 
 function App() {
   if (supabaseConfigError) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-50 p-6">
-        <div className="max-w-lg w-full bg-white rounded-2xl shadow-glass p-6 text-center">
-          <h1 className="text-xl font-bold text-neutral-900 mb-2">Configuração ausente</h1>
-          <p className="text-neutral-600">As variáveis de ambiente do Supabase não foram carregadas. Atualize a página ou verifique a configuração do Vercel.</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-black via-neutral-950 to-emerald-950/20 p-6">
+        <div className="max-w-lg w-full glass-card p-6 text-center">
+          <h1 className="text-xl font-semibold text-rc-text mb-2">Configuração ausente</h1>
+          <p className="text-rc-text-muted">As variáveis de ambiente do Supabase não foram carregadas. Atualize a página ou verifique a configuração do Vercel.</p>
         </div>
       </div>
     )
@@ -39,7 +41,7 @@ function App() {
             
             {/* Rotas protegidas */}
             <Route path="/" element={
-              <ProtectedRoute>
+              <ProtectedRoute requireEditor>
                 <Layout><DashboardPage /></Layout>
               </ProtectedRoute>
             } />
@@ -51,6 +53,16 @@ function App() {
             <Route path="/acervo/:localidade" element={
               <ProtectedRoute>
                 <Layout><LocalidadePage /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/busca" element={
+              <ProtectedRoute>
+                <Layout><SearchPage /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/trabalho" element={
+              <ProtectedRoute>
+                <Layout><WorkspacePage /></Layout>
               </ProtectedRoute>
             } />
             <Route path="/upload" element={

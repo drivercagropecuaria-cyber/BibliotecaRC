@@ -1,0 +1,552 @@
+{
+  "project": "Mundo Virtual Villa Canabrava",
+  "phase": "FASE 2 - MVP Development",
+  "phase_number": 2,
+  "start_date": "2026-02-13",
+  "expected_end_date": "2026-03-13",
+  "duration_weeks": 4,
+  "status": "WEEK_1_COMPLETED",
+  "budget_monthly": "$2.500",
+  "budget_allocation": {
+    "frontend_development": "$1.200",
+    "3d_tools_blender": "$600",
+    "infrastructure_supabase": "$400",
+    "tools_licenses": "$300"
+  },
+  "approval_status": "APPROVED_FOR_EXECUTION",
+  "go_nogo_required": true,
+  "executive_summary": {
+    "objectives": [
+      "Estabelecer React 18 + TypeScript com Vite (fast development)",
+      "Projetar schema Supabase com RLS policies (segurança)",
+      "Implementar Biblioteca Digital (Search, Filter, View)",
+      "Construir pipeline Blender → Three.js para 3D models",
+      "Integrar mapa GIS interativo com 252 camadas de Fase 1",
+      "Validar API endpoints e testes de componentes React"
+    ],
+    "critical_path": [
+      "Semana 1: React setup + Supabase design",
+      "Semana 2: Component library + Biblioteca Digital UI",
+      "Semana 3: 3D museum + GIS map integration",
+      "Semana 4: API integration + Testing + GO/NO-GO"
+    ],
+    "key_metrics": {
+      "react_components_expected": 10,
+      "test_coverage_target_percent": 70,
+      "api_endpoints_expected": 8,
+      "gis_layers_to_support": 252,
+      "3d_models_for_launch": 1,
+      "performance_vite_build_target_seconds": 5,
+      "bundle_size_target_kb": 500
+    },
+    "success_criteria": [
+      "React app running on localhost:5173 with HMR",
+      "Supabase schema with RLS policies implemented",
+      "Biblioteca Digital with search/filter functional",
+      "3D museum viewer rendering models",
+      "GIS map showing all 252 layers",
+      "5+ React components with test coverage",
+      "API endpoints integrated and validated"
+    ]
+  },
+  "weekly_tracking": [
+    {
+      "week": 1,
+      "dates": "2026-02-06 ~ 2026-02-06",
+      "theme": "React Setup + Supabase Schema",
+      "status": "COMPLETED",
+      "completion_percentage": 100,
+      "actual_start_date": "2026-02-06",
+      "actual_end_date": "2026-02-06",
+      "actual_hours_spent": 2.3,
+      "tasks": [
+        {
+          "id": "1.1",
+          "title": "Inicializar React 18 + TypeScript com Vite",
+          "description": "Criar novo projeto frontend com npm create vite@latest",
+          "resource": "Frontend Dev",
+          "status": "COMPLETED",
+          "expected_output": "frontend/ folder com React app rodando",
+          "success_criteria": [
+            "App criado com `npm create vite@latest frontend -- --template react-ts`",
+            "Dependências instaladas (supabase, react-query, zustand, axios)",
+            "Vite dev server rodando em localhost:5173",
+            "HMR funcionando (hot reload ao salvar arquivo)",
+            "npm run build gera /dist otimizado",
+            "TypeScript strict mode habilitado"
+          ],
+          "blocker": true,
+          "estimated_hours": 3,
+          "completion_date": "2026-02-14"
+        },
+        {
+          "id": "1.2",
+          "title": "Projetar Schema Supabase (Document)",
+          "description": "Documentar 6 tabelas com RLS policies e indices",
+          "resource": "Backend/Architect",
+          "status": "PENDING",
+          "expected_output": "docs/SUPABASE_SCHEMA_DESIGN_FASE_2.md",
+          "success_criteria": [
+            "6 tabelas documentadas: users, localidades, catalogos, collections, models_3d, gis_layers",
+            "Cada tabela tem RLS policy definida",
+            "Índices de performance especificados",
+            "3 RPC functions descritas",
+            "3 storage buckets com RLS",
+            "Diagrama ER (ASCII ou link)"
+          ],
+          "blocker": false,
+          "estimated_hours": 4,
+          "completion_date": "2026-02-16"
+        },
+        {
+          "id": "1.3",
+          "title": "Setup Supabase Local (Docker)",
+          "description": "Inicializar Supabase com Docker e conectar ao frontend",
+          "resource": "DevOps/Backend",
+          "status": "PENDING",
+          "expected_output": "Supabase rodando em localhost:54321",
+          "success_criteria": [
+            "Supabase CLI instalado (`supabase --version`)",
+            "Docker desktop rodando",
+            "supabase init executado",
+            "supabase start inicia containers sem erro",
+            "Studio acessível em localhost:54323",
+            "Database em localhost:54322",
+            "frontend/.env.local com credenciais configurado"
+          ],
+          "blocker": true,
+          "estimated_hours": 2,
+          "completion_date": "2026-02-17"
+        }
+      ],
+      "deliverables": [
+        "frontend/ React app running",
+        "docs/SUPABASE_SCHEMA_DESIGN_FASE_2.md",
+        "Supabase services running"
+      ],
+      "validation_checklist": [
+        "npm run dev starts without errors",
+        "localhost:5173 accessible",
+        "TypeScript no errors",
+        "Schema document complete",
+        "Supabase Studio accessible",
+        "Database connection working"
+      ]
+    },
+    {
+      "week": 2,
+      "dates": "2026-02-20 ~ 2026-02-27",
+      "theme": "Component Library + Biblioteca Digital",
+      "tasks": [
+        {
+          "id": "2.1",
+          "title": "Criar Component Library Base",
+          "description": "Implementar 5+ componentes reutilizáveis com TypeScript",
+          "resource": "Frontend Dev",
+          "status": "PENDING",
+          "expected_output": "src/components/ com SearchBar, FilterPanel, ItemCard, ItemDetail, Navbar",
+          "success_criteria": [
+            "5+ componentes criados",
+            "Componentes usam TypeScript strict",
+            "Props bem tipadas com interfaces",
+            "Componentes testáveis (sem side effects)",
+            "Cada componente tem export named",
+            "CSS modular (Tailwind ou CSS Modules)"
+          ],
+          "blocker": false,
+          "estimated_hours": 8,
+          "completion_date": "2026-02-23"
+        },
+        {
+          "id": "2.2",
+          "title": "Implementar Biblioteca Digital Interface",
+          "description": "Criar página principal com search, filter, grid de items",
+          "resource": "Frontend Dev",
+          "status": "PENDING",
+          "expected_output": "src/pages/BibliotecaDigital.tsx funcional",
+          "success_criteria": [
+            "SearchBar campo de busca funcional",
+            "FilterPanel com checkboxes de categorias",
+            "ItemCard renderizando items em grid",
+            "Filtro por texto e categoria funcionando",
+            "ItemDetail modal/view ao clicar item",
+            "Loading state enquanto carrega",
+            "Sem erros console ao usar"
+          ],
+          "blocker": true,
+          "estimated_hours": 6,
+          "completion_date": "2026-02-25"
+        },
+        {
+          "id": "2.3",
+          "title": "Integração Inicial com Supabase",
+          "description": "Conectar componentes a dados (mesmo que mock)",
+          "resource": "Frontend Dev",
+          "status": "PENDING",
+          "expected_output": "BibliotecaDigital.tsx usando supabase.from().select()",
+          "success_criteria": [
+            "Supabase client importado em componentes",
+            "Query select basica para catalogos",
+            "Mock data se schema não estiver pronto",
+            "Loading/error states implementados",
+            "Data renderiza sem erros"
+          ],
+          "blocker": false,
+          "estimated_hours": 4,
+          "completion_date": "2026-02-27"
+        }
+      ],
+      "deliverables": [
+        "5+ React components implementados",
+        "BibliotecaDigital page funcional",
+        "Component library exportável"
+      ],
+      "validation_checklist": [
+        "Components have TypeScript types",
+        "BibliotecaDigital page accessible at /biblioteca",
+        "Search input functional",
+        "Filter checkboxes working",
+        "No console errors",
+        "Components render correctly"
+      ]
+    },
+    {
+      "week": 3,
+      "dates": "2026-02-27 ~ 2026-03-06",
+      "theme": "3D Museum + GIS Map Integration",
+      "tasks": [
+        {
+          "id": "3.1",
+          "title": "Blender → Three.js Export Pipeline",
+          "description": "Exportar modelo 3D da Sede como .glb otimizado",
+          "resource": "3D Artist/Técnico",
+          "status": "PENDING",
+          "expected_output": "models/3d/sede-vila-terezinha.glb (<50MB)",
+          "success_criteria": [
+            "Modelo 3D carregado em Blender",
+            "Geometria otimizada (triangulada, meshes combinadas)",
+            "Texturas baked em 2K max",
+            "Exportado como glTF Binary (.glb)",
+            "Tamanho final < 50MB",
+            "Preview em Three.js Editor funciona",
+            "Geometria e texturas intactas"
+          ],
+          "blocker": true,
+          "estimated_hours": 6,
+          "completion_date": "2026-03-01"
+        },
+        {
+          "id": "3.2",
+          "title": "Integrar Three.js Museum Viewer",
+          "description": "Criar componente que renderiza modelo 3D com controles",
+          "resource": "Frontend Dev (3D/WebGL)",
+          "status": "PENDING",
+          "expected_output": "src/components/museum/MuseumViewer.tsx",
+          "success_criteria": [
+            "Three.js e @react-three/fiber instalados",
+            "Componente carrega modelo .glb",
+            "OrbitControls funcionando (drag, zoom, rotate)",
+            "Iluminação adequada (ambient + directional)",
+            "Sem erros WebGL",
+            "Model carrega em < 5 segundos"
+          ],
+          "blocker": true,
+          "estimated_hours": 5,
+          "completion_date": "2026-03-03"
+        },
+        {
+          "id": "3.3",
+          "title": "Integrar Leaflet GIS Map",
+          "description": "Criar mapa interativo com 252 camadas GeoJSON",
+          "resource": "Frontend Dev (GIS/Mapping)",
+          "status": "PENDING",
+          "expected_output": "src/components/map/InteractiveGISMap.tsx",
+          "success_criteria": [
+            "Leaflet e react-leaflet instalados",
+            "Mapa renderiza com OSM tiles",
+            "252 camadas (KML → GeoJSON) carregáveis",
+            "Toggle checkboxes para cada camada",
+            "Zoom/pan funciona",
+            "Feature click mostra info",
+            "Performance aceitável (sem lag)"
+          ],
+          "blocker": true,
+          "estimated_hours": 7,
+          "completion_date": "2026-03-06"
+        }
+      ],
+      "deliverables": [
+        "3D model (.glb) otimizado",
+        "MuseumViewer component funcional",
+        "InteractiveGISMap com 252 layers"
+      ],
+      "validation_checklist": [
+        "Model loads without WebGL errors",
+        "OrbitControls responsive",
+        "Map renders all layers",
+        "Layer toggles work",
+        "No performance issues",
+        "3D and map components integrated"
+      ]
+    },
+    {
+      "week": 4,
+      "dates": "2026-03-06 ~ 2026-03-13",
+      "theme": "API Integration + Testing + GO/NO-GO",
+      "tasks": [
+        {
+          "id": "4.1",
+          "title": "Integrar API Endpoints com Supabase",
+          "description": "Conectar componentes a banco dados via Supabase RPC + React Query",
+          "resource": "Frontend Dev + Backend Dev",
+          "status": "PENDING",
+          "expected_output": "src/services/supabaseClient.ts + src/hooks/useApi.ts",
+          "success_criteria": [
+            "supabaseClient.ts com 8+ API functions",
+            "useApi.ts com React Query hooks",
+            "getCatalogos(), searchCatalogos(), getLocalidades() funcionam",
+            "getModels3D(), getGISLayers() funcionam",
+            "Error handling em cada função",
+            "Loading states em React Query",
+            "Types bem definidos para respostas"
+          ],
+          "blocker": true,
+          "estimated_hours": 6,
+          "completion_date": "2026-03-09"
+        },
+        {
+          "id": "4.2",
+          "title": "Escrever Testes Unitários com Vitest",
+          "description": "Criar suite de testes para componentes críticos",
+          "resource": "QA/Frontend Dev",
+          "status": "PENDING",
+          "expected_output": "src/**/__tests__/ com 8+ testes",
+          "success_criteria": [
+            "Vitest instalado e configurado",
+            "@testing-library/react setup",
+            "SearchBar.test.tsx com 2+ testes",
+            "FilterPanel.test.tsx com 2+ testes",
+            "ItemCard.test.tsx com 2+ testes",
+            "Coverage report > 70%",
+            "npm run test passes all",
+            "npm run test:ui accessible"
+          ],
+          "blocker": false,
+          "estimated_hours": 5,
+          "completion_date": "2026-03-11"
+        },
+        {
+          "id": "4.3",
+          "title": "Consolidação + GO/NO-GO",
+          "description": "Verificar todos critérios e gerar relatório final",
+          "resource": "Tech Lead (Roo)",
+          "status": "PENDING",
+          "expected_output": "reports/FASE_2_CONSOLIDACAO.json",
+          "success_criteria": [
+            "reports/FASE_2_CONSOLIDACAO.json gerado",
+            "Todos 6 critérios com status PASS",
+            "GO/NO-GO decision documentada",
+            "Riscos identificados",
+            "Métricas numéricas reportadas",
+            "Recomendação clara para Fase 3"
+          ],
+          "blocker": true,
+          "estimated_hours": 3,
+          "completion_date": "2026-03-13"
+        }
+      ],
+      "deliverables": [
+        "API integration complete",
+        "Vitest suite with 8+ tests",
+        "FASE_2_CONSOLIDACAO.json report"
+      ],
+      "validation_checklist": [
+        "API functions all working",
+        "All tests passing",
+        "Test coverage > 70%",
+        "Consolidation report complete",
+        "GO/NO-GO decision made",
+        "Ready for Phase 3"
+      ]
+    }
+  ],
+  "risk_assessment": {
+    "high_risks": [
+      {
+        "id": "H1",
+        "title": "3D Model Performance (252 GIS layers + 3D model)",
+        "probability": 0.6,
+        "impact": "High",
+        "mitigation": "Implement layer clustering, level-of-detail (LOD), virtual scrolling for layer list"
+      },
+      {
+        "id": "H2",
+        "title": "Blender Model Not Optimized",
+        "probability": 0.4,
+        "impact": "Medium",
+        "mitigation": "Use Blender optimization guidelines, test with Three.js editor before integration"
+      },
+      {
+        "id": "H3",
+        "title": "Supabase RLS Policy Conflicts",
+        "probability": 0.3,
+        "impact": "Medium",
+        "mitigation": "Test RLS policies thoroughly, use Supabase studio for debugging"
+      }
+    ],
+    "medium_risks": [
+      {
+        "id": "M1",
+        "title": "Component Library Scalability",
+        "probability": 0.5,
+        "impact": "Medium",
+        "mitigation": "Design components with composition in mind, use storybook if time permits"
+      },
+      {
+        "id": "M2",
+        "title": "Test Coverage Below Target",
+        "probability": 0.4,
+        "impact": "Low",
+        "mitigation": "Prioritize critical components, expand tests incrementally"
+      }
+    ],
+    "low_risks": [
+      {
+        "id": "L1",
+        "title": "Vite build performance",
+        "probability": 0.2,
+        "impact": "Low",
+        "mitigation": "Monitor build time, use vite plugins if needed"
+      }
+    ]
+  },
+  "dependencies": {
+    "external": [
+      "Node.js 18+ installed",
+      "npm or pnpm",
+      "Docker desktop",
+      "Supabase CLI",
+      "Blender 4.0+ (for 3D modeling)",
+      "Git for version control"
+    ],
+    "internal": [
+      "Fase 1 completion (GIS data validation + KML import)",
+      "Supabase account/project setup",
+      "Backend developer to create RPC functions"
+    ]
+  },
+  "resource_allocation": {
+    "frontend_dev": {
+      "hours": 40,
+      "tasks": ["1.1", "2.1", "2.2", "2.3", "3.2", "3.3", "4.1"]
+    },
+    "backend_dev": {
+      "hours": 16,
+      "tasks": ["1.2", "1.3", "4.1"]
+    },
+    "devops": {
+      "hours": 8,
+      "tasks": ["1.3"]
+    },
+    "qa_tester": {
+      "hours": 12,
+      "tasks": ["4.2"]
+    },
+    "3d_artist": {
+      "hours": 12,
+      "tasks": ["3.1"]
+    },
+    "tech_lead": {
+      "hours": 8,
+      "tasks": ["1.2", "4.3"]
+    }
+  },
+  "approval_criteria": {
+    "criterion_1": {
+      "requirement": "React app running on localhost:5173",
+      "description": "npm run dev starts successfully with HMR",
+      "status": "PENDING",
+      "evidence_required": "Screenshot or console output showing app running"
+    },
+    "criterion_2": {
+      "requirement": "Supabase schema with RLS policies",
+      "description": "6 tables with documented RLS policies deployed",
+      "status": "PENDING",
+      "evidence_required": "Schema design document + supabase migrations"
+    },
+    "criterion_3": {
+      "requirement": "Biblioteca Digital with search/filter",
+      "description": "Full-text search and category filter functional",
+      "status": "PENDING",
+      "evidence_required": "Component code + demo showing both features working"
+    },
+    "criterion_4": {
+      "requirement": "3D map rendering with GIS data",
+      "description": "Three.js model + Leaflet map with 252 layers",
+      "status": "PENDING",
+      "evidence_required": "Both components working in browser, no WebGL errors"
+    },
+    "criterion_5": {
+      "requirement": "5+ React components tested",
+      "description": "Vitest suite with minimum 70% coverage",
+      "status": "PENDING",
+      "evidence_required": "Test results showing pass rate and coverage %"
+    },
+    "criterion_6": {
+      "requirement": "API endpoints integrated",
+      "description": "8+ Supabase RPC functions integrated with React Query",
+      "status": "PENDING",
+      "evidence_required": "API functions used in at least 3 components"
+    }
+  },
+  "go_nogo_thresholds": {
+    "must_have": [
+      "React app running without errors",
+      "Supabase local setup working",
+      "BibliotecaDigital page functional",
+      "GIS map rendering all layers"
+    ],
+    "nice_to_have": [
+      "API fully integrated",
+      "Test coverage > 70%",
+      "Performance optimizations"
+    ]
+  },
+  "stakeholders": {
+    "primary_decision_maker": "Roberth Naninne de Souza",
+    "technical_lead": "Roo",
+    "dev_team": "Frontend Dev + Backend Dev + DevOps",
+    "validation_agent": "External QA/Validation Specialist"
+  },
+  "metrics_tracking": {
+    "week_1": {
+      "tasks_completed": 0,
+      "tasks_total": 3,
+      "on_schedule": false,
+      "blockers": []
+    },
+    "week_2": {
+      "tasks_completed": 0,
+      "tasks_total": 3,
+      "on_schedule": false,
+      "blockers": []
+    },
+    "week_3": {
+      "tasks_completed": 0,
+      "tasks_total": 3,
+      "on_schedule": false,
+      "blockers": []
+    },
+    "week_4": {
+      "tasks_completed": 0,
+      "tasks_total": 3,
+      "on_schedule": false,
+      "blockers": []
+    }
+  },
+  "next_phase": {
+    "phase_name": "FASE 3 - Advanced Features & Optimization",
+    "expected_start": "2026-03-13",
+    "placeholder_info": "Pending GO decision from Fase 2"
+  }
+}

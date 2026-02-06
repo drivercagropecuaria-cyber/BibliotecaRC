@@ -59,26 +59,26 @@ export function GlobalErrorOverlay() {
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center p-4">
-      <div className="max-w-2xl w-full bg-white rounded-2xl shadow-xl border border-red-200 p-5">
+      <div className="max-w-2xl w-full glass-card border border-red-500/30 p-5">
         <div className="flex items-center justify-between gap-3 mb-3">
-          <div className="flex items-center gap-2 text-red-600">
+          <div className="flex items-center gap-2 text-red-200">
             <AlertTriangle className="w-5 h-5" />
             <h2 className="font-semibold">Erro não tratado no aplicativo</h2>
           </div>
           <button
             onClick={() => setError(null)}
-            className="p-1 rounded hover:bg-neutral-100"
+            className="p-1 rounded hover:bg-white/5 text-rc-text-muted"
             aria-label="Fechar"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
-        <p className="text-sm text-neutral-700 mb-2">{error.message}</p>
+        <p className="text-sm text-rc-text mb-2">{error.message}</p>
         {error.source && (
-          <p className="text-xs text-neutral-500 mb-2">{error.source}</p>
+          <p className="text-xs text-rc-text-muted mb-2">{error.source}</p>
         )}
         {error.stack && (
-          <pre className="text-xs bg-neutral-100 p-3 rounded overflow-x-auto max-h-64">{error.stack}</pre>
+          <pre className="text-xs bg-neutral-950/60 p-3 rounded overflow-x-auto max-h-64 text-rc-text-muted">{error.stack}</pre>
         )}
       </div>
     </div>

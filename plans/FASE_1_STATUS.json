@@ -1,0 +1,356 @@
+{
+  "project": "Mundo Virtual Villa Canabrava",
+  "phase": "FASE 1 - FUNDAÇÃO",
+  "phase_number": 1,
+  "start_date": "2026-02-06",
+  "expected_end_date": "2026-03-06",
+  "duration_weeks": 4,
+  "status": "INITIATED",
+  "budget_monthly": "$1.870",
+  "approval_status": "APPROVED_FOR_EXECUTION",
+  "go_nogo_required": true,
+  "executive_summary": {
+    "objectives": [
+      "Validar integridade de 252 arquivos KML (dados geoespaciais)",
+      "Estruturar acervo histórico com 5 categorias + 20+ subcategorias",
+      "Configurar infraestrutura PostgreSQL + PostGIS (local Docker)",
+      "Importar 252 KML em lote para geospatial database",
+      "Gerar reports consolidados para GO/NO-GO decision"
+    ],
+    "critical_path": [
+      "Semana 1: GIS Validation + Acervo Structure",
+      "Semana 2: BD Setup + KML Pilot Import",
+      "Semana 3: KML Full Import + DB Validation",
+      "Semana 4: Consolidation + GO/NO-GO"
+    ],
+    "key_metrics": {
+      "gis_valid_files_expected": 252,
+      "gis_valid_files_minimum": 240,
+      "acervo_folders_expected": 50,
+      "kml_features_expected": 50000,
+      "data_quality_target_percent": 99
+    }
+  },
+  "weekly_tracking": [
+    {
+      "week": 1,
+      "dates": "2026-02-06 ~ 2026-02-13",
+      "theme": "Validação GIS + Estrutura Acervo",
+      "tasks": [
+        {
+          "id": "1.1",
+          "title": "Execução de Validação GIS",
+          "description": "Rodar python tools/validate_gis_data.py contra 252 KML files",
+          "resource": "Dev",
+          "status": "PENDING",
+          "expected_output": "reports/GIS_VALIDATION_REPORT.json",
+          "success_criteria": [
+            "Arquivo gerado com timestamp correto",
+            ">=95% arquivos válidos (>=240)",
+            "Topology_Errors = 0 para 100%",
+            "Positional_Accuracy < 1m onde aplicável"
+          ],
+          "blocker": false
+        },
+        {
+          "id": "1.2",
+          "title": "Criação de Estrutura Acervo",
+          "description": "Criar 5 categorias + 20+ subcategorias manualmente ou script",
+          "resource": "Curador/Admin",
+          "status": "PENDING",
+          "expected_output": "acervo/ACERVO_HISTORICO/ com >=50 pastas",
+          "success_criteria": [
+            "5 categorias principais criadas",
+            "Mínimo 9 subcategorias",
+            "Pastas de anos (2020-2026) em 2+ categorias",
+            "Total folders >= 50"
+          ],
+          "blocker": false
+        },
+        {
+          "id": "1.3",
+          "title": "Geração Report Acervo",
+          "description": "Validar estrutura e gerar report estrutura",
+          "resource": "Admin",
+          "status": "PENDING",
+          "expected_output": "reports/ACERVO_STRUCTURE_REPORT.json",
+          "success_criteria": [
+            "Report gerado",
+            "Contagem correta de pastas",
+            "Validação de INDEX.csv"
+          ],
+          "blocker": false
+        }
+      ],
+      "decisions_required": [],
+      "dependencies": []
+    },
+    {
+      "week": 2,
+      "dates": "2026-02-14 ~ 2026-02-20",
+      "theme": "Setup BD + KML Pilot",
+      "tasks": [
+        {
+          "id": "2.1",
+          "title": "Configuração PostgreSQL + PostGIS",
+          "description": "Setup Docker container com PostgreSQL 15 + PostGIS 3.4",
+          "resource": "DevOps/Dev",
+          "status": "PENDING",
+          "expected_output": "Docker container rodando em localhost:5432",
+          "success_criteria": [
+            "Container PostgreSQL rodando",
+            "Banco villa_virtual criado",
+            "PostGIS extensão habilitada",
+            "Conexão testada com sucesso"
+          ],
+          "blocker": true
+        },
+        {
+          "id": "2.2",
+          "title": "Importação KML Pilot (5 arquivos)",
+          "description": "Rodar import_kml_batch.py com modo PILOT",
+          "resource": "Dev",
+          "status": "PENDING",
+          "expected_output": "reports/KML_IMPORT_PILOT_SUMMARY.json",
+          "success_criteria": [
+            "5 arquivos processados sem erro",
+            ">=500 features importadas",
+            "Tabelas gis_data.features criadas",
+            "Índices GIST/GIN presentes"
+          ],
+          "blocker": true,
+          "depends_on": ["2.1"]
+        }
+      ],
+      "decisions_required": [
+        "Optar por Docker local vs AWS RDS para database"
+      ],
+      "dependencies": [
+        "Semana 1 reports (GIS Validation + Acervo Structure)"
+      ]
+    },
+    {
+      "week": 3,
+      "dates": "2026-02-21 ~ 2026-02-27",
+      "theme": "KML Import Completo + Validação DB",
+      "tasks": [
+        {
+          "id": "3.1",
+          "title": "Importação KML Completa (252 arquivos)",
+          "description": "Rodar import_kml_batch.py modo FULL para 252 KML files",
+          "resource": "Dev",
+          "status": "PENDING",
+          "expected_output": "reports/KML_IMPORT_SUMMARY.json",
+          "success_criteria": [
+            "252 arquivos processados",
+            ">=240 successful (>=95%)",
+            ">=50.000 features importadas",
+            "19 categorias presentes"
+          ],
+          "blocker": true,
+          "depends_on": ["2.2"]
+        },
+        {
+          "id": "3.2",
+          "title": "Validação de Dados Importados",
+          "description": "Rodar queries SQL para validar integridade geométrica",
+          "resource": "Dev/QA",
+          "status": "PENDING",
+          "expected_output": "reports/DB_VALIDATION_REPORT.json",
+          "success_criteria": [
+            "ST_IsValid = true para >=99% features",
+            "Zero self-intersections críticas",
+            "Coverage geográfica correta"
+          ],
+          "blocker": true,
+          "depends_on": ["3.1"]
+        }
+      ],
+      "decisions_required": [],
+      "dependencies": [
+        "BD operacional",
+        "KML Pilot bem-sucedido"
+      ]
+    },
+    {
+      "week": 4,
+      "dates": "2026-02-28 ~ 2026-03-06",
+      "theme": "Consolidação + GO/NO-GO",
+      "tasks": [
+        {
+          "id": "4.1",
+          "title": "Consolidação de Reports",
+          "description": "Agregar todos os reports em FASE_1_CONSOLIDACAO.json",
+          "resource": "PM/Admin",
+          "status": "PENDING",
+          "expected_output": "reports/FASE_1_CONSOLIDACAO.json",
+          "success_criteria": [
+            "Consolida GIS Validation + Acervo + BD Import + Data Quality",
+            "Inclui tabela Achados vs Esperado",
+            "GO/NO-GO recommendation presente"
+          ],
+          "blocker": false,
+          "depends_on": ["3.2"]
+        },
+        {
+          "id": "4.2",
+          "title": "GO/NO-GO Decision",
+          "description": "Roberth decide GO (Fase 2) ou NO-GO (remediation)",
+          "resource": "Roberth (Project Owner)",
+          "status": "PENDING",
+          "expected_output": "FASE_1_CONSOLIDACAO.json com status_final",
+          "success_criteria": [
+            ">=95% GIS files válidos",
+            ">=50 acervo folders",
+            ">=95% KML import success",
+            ">=99% data quality"
+          ],
+          "blocker": true,
+          "depends_on": ["4.1"]
+        }
+      ],
+      "decisions_required": [
+        "GO para Fase 2 (MVP Development) ou NO-GO (Remediation)"
+      ],
+      "dependencies": [
+        "Todos os reports das Semanas 1-3"
+      ]
+    }
+  ],
+  "risk_management": {
+    "risks": [
+      {
+        "id": "R1",
+        "title": "KML files com geometria inválida",
+        "probability": "MEDIUM",
+        "impact": "HIGH",
+        "mitigation": "Script de validação detecta precocemente; manual fix se <12 files afetados",
+        "escalation_level": "Week 1"
+      },
+      {
+        "id": "R2",
+        "title": "BD connection issues ou storage insuficiente",
+        "probability": "LOW",
+        "impact": "HIGH",
+        "mitigation": "Docker local com volume gerenciado; escalável para AWS RDS",
+        "escalation_level": "Week 2"
+      },
+      {
+        "id": "R3",
+        "title": "Performance de import lenta (>4h para 252 files)",
+        "probability": "MEDIUM",
+        "impact": "MEDIUM",
+        "mitigation": "Otimizar batch size; verificar índices; usar bulk insert",
+        "escalation_level": "Week 3"
+      },
+      {
+        "id": "R4",
+        "title": "Falta de recursos (DevOps/Dev não disponível)",
+        "probability": "LOW",
+        "impact": "HIGH",
+        "mitigation": "Scripts automatizados; documentação Runbook para self-serve",
+        "escalation_level": "Week 1"
+      }
+    ]
+  },
+  "go_nogo_criteria": {
+    "GO_conditions": [
+      "GIS Validation: >=95% arquivos válidos (>=240/252)",
+      "Acervo Structure: >=50 pastas criadas com hierarquia correta",
+      "KML Import: >=95% arquivos importados (>=240/252)",
+      "Data Quality: >=99% geometrias válidas (ST_IsValid = true)",
+      "Nenhuma tarefa BLOCKER pendente",
+      "Roberth approval formal"
+    ],
+    "NO_GO_conditions": [
+      "GIS Validation: <95% arquivos válidos",
+      "KML Import: <95% sucesso de importação",
+      "Data Quality: <99% geometrias válidas",
+      "Infraestrutura BD instável ou inacessível",
+      "Mais de 20% de arquivos KML com erros críticos não resolvíveis"
+    ],
+    "contingency_plan": "Se NO-GO: Identificar raiz dos problemas em Week 1-2, remediar em semana adicional, re-validar"
+  },
+  "deliverables": [
+    {
+      "name": "GIS_VALIDATION_REPORT.json",
+      "location": "reports/",
+      "week": 1,
+      "format": "JSON",
+      "contains": ["valid_files_count", "invalid_files_details", "topology_errors", "positional_accuracy"]
+    },
+    {
+      "name": "ACERVO_STRUCTURE_REPORT.json",
+      "location": "reports/",
+      "week": 1,
+      "format": "JSON",
+      "contains": ["folder_structure", "subcategory_count", "index_csv_validation"]
+    },
+    {
+      "name": "KML_IMPORT_PILOT_SUMMARY.json",
+      "location": "reports/",
+      "week": 2,
+      "format": "JSON",
+      "contains": ["files_processed", "features_imported", "success_rate"]
+    },
+    {
+      "name": "KML_IMPORT_SUMMARY.json",
+      "location": "reports/",
+      "week": 3,
+      "format": "JSON",
+      "contains": ["total_files", "successful_files", "total_features", "categories_imported"]
+    },
+    {
+      "name": "DB_VALIDATION_REPORT.json",
+      "location": "reports/",
+      "week": 3,
+      "format": "JSON",
+      "contains": ["geometry_validity_percent", "coverage_analysis", "index_status"]
+    },
+    {
+      "name": "FASE_1_CONSOLIDACAO.json",
+      "location": "reports/",
+      "week": 4,
+      "format": "JSON",
+      "contains": ["all_metrics", "achievement_vs_targets", "go_nogo_recommendation"]
+    }
+  ],
+  "communication_plan": {
+    "weekly_sync": {
+      "day": "Friday 2pm PT",
+      "attendees": ["Roberth", "Dev Lead", "DevOps", "Project Manager"],
+      "duration_minutes": 30,
+      "agenda": "Review previous week results, identify blockers, adjust next week plan"
+    },
+    "status_reports": {
+      "frequency": "Weekly (Friday EOD)",
+      "recipient": "Roberth + Team",
+      "format": "JSON dashboard (FASE_1_STATUS.json) + text summary"
+    },
+    "escalation": {
+      "blocker_found": "Immediate Slack notification + call with tech lead",
+      "decision_required": "Schedule 1-on-1 with Roberth"
+    }
+  },
+  "next_phase_readiness": {
+    "phase_2": "FASE 2 - FUNDAÇÃO (MVP Development)",
+    "triggers_go": [
+      "FASE_1_CONSOLIDACAO.json shows all metrics >= targets",
+      "Roberth gives formal GO approval",
+      "All 6 reports present and signed off"
+    ],
+    "preparation_tasks_if_go": [
+      "Setup React 18 + TypeScript scaffolding",
+      "Configure Supabase project for museum content schema",
+      "Prepare 3D modeling pipeline (Blender → Three.js)",
+      "Onboard frontend + DevOps team (Week of 2026-03-07)"
+    ]
+  },
+  "metadata": {
+    "created_date": "2026-02-06T01:18:36Z",
+    "last_updated": "2026-02-06T01:18:36Z",
+    "version": "1.0",
+    "owner": "Roo (Technical Lead)",
+    "approval_required_from": ["Roberth Naninne (Project Owner)"]
+  }
+}

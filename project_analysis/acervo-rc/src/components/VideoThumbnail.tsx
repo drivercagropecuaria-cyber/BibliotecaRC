@@ -62,7 +62,7 @@ export const VideoThumbnail = memo(function VideoThumbnail({
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
-  }, [isVisible, src])
+  }, [isVisible, src, loaded, onError])
 
   const handleError = () => {
     setError(true)

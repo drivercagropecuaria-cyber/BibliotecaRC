@@ -1,0 +1,19 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run Vite Dev Server (acervo-rc)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"project_analysis/acervo-rc",
+				"run",
+				"dev"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		}
+	]
+}

@@ -77,6 +77,12 @@ const tabs = [
   { id: 'temas', label: 'Temas e Status', icon: Users },
 ]
 
+const steps = [
+  { id: 'upload', label: 'Upload fisico', description: 'Envie imagens, videos e PDFs' },
+  { id: 'catalogacao', label: 'Catalogacao', description: 'Preencha metadados e taxonomias' },
+  { id: 'revisao', label: 'Revisao', description: 'Confirme e salve no acervo' },
+]
+
 export function UploadPage() {
   const navigate = useNavigate()
   const { taxonomy, loading: taxonomyLoading } = useTaxonomy()
@@ -142,19 +148,16 @@ export function UploadPage() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [hasPendingUploads])
 
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    return (
-      <div className="max-w-5xl mx-auto animate-fade-in">
-        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700">
-          Variáveis de ambiente do Supabase não configuradas.
-        </div>
-      </div>
-    )
-  }
-
   const totalSize = useMemo(() => files.reduce((acc, f) => acc + f.file.size, 0), [files])
   const uploadedSize = useMemo(() => files.reduce((acc, f) => acc + (f.status === 'completed' ? f.file.size : (f.file.size * f.progress / 100)), 0), [files])
   const overallProgress = totalSize > 0 ? Math.round((uploadedSize / totalSize) * 100) : 0
+  const canSave = form.titulo && hasUploadedFiles && !isUploading
+  const stepStatus = useMemo(() => {
+    const uploadStatus = hasUploadedFiles ? 'done' : (files.length > 0 || isUploading ? 'active' : 'pending')
+    const catalogStatus = form.titulo ? (canSave ? 'done' : 'active') : 'pending'
+    const reviewStatus = success ? 'done' : (canSave ? 'active' : 'pending')
+    return { upload: uploadStatus, catalogacao: catalogStatus, revisao: reviewStatus }
+  }, [hasUploadedFiles, files.length, isUploading, form.titulo, canSave, success])
 
   const uploadFile = useCallback(async (file: File, index: number) => {
     const { data: sessionData } = await supabase.auth.getSession()
@@ -316,9 +319,9 @@ export function UploadPage() {
   }
 
   const getFileIcon = (type: string) => {
-    if (type.startsWith('image')) return <FileImage className="w-6 h-6 text-accent-500" />
-    if (type.startsWith('video')) return <FileVideo className="w-6 h-6 text-purple-500" />
-    return <File className="w-6 h-6 text-neutral-500" />
+    if (type.startsWith('image')) return <FileImage className="w-6 h-6 text-emerald-200" />
+    if (type.startsWith('video')) return <FileVideo className="w-6 h-6 text-amber-200" />
+    return <File className="w-6 h-6 text-rc-text-muted" />
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -368,18 +371,16 @@ export function UploadPage() {
     finally { setSaving(false) }
   }
 
-  const canSave = form.titulo && hasUploadedFiles && !isUploading
-
   // Selects dependentes
 
   const renderSelect = (key: string, label: string, options: string[], disabled = false) => (
     <div>
-      <label className="block text-sm font-semibold text-neutral-700 mb-2">{label}</label>
+      <label className="block text-sm font-semibold text-rc-text-muted mb-2">{label}</label>
       <select
         value={form[key as keyof typeof form]}
         onChange={(e) => setForm({ ...form, [key]: e.target.value })}
         disabled={disabled}
-        className="w-full px-4 py-3 border-2 border-neutral-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 min-h-[48px] bg-neutral-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full px-4 py-3 border border-rc-border rounded-xl focus:ring-2 focus:ring-amber-400/40 focus:border-rc-gold min-h-[48px] bg-neutral-900/50 text-rc-text transition-all disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <option value="">Selecione...</option>
         {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
@@ -394,12 +395,12 @@ export function UploadPage() {
     disabled = false
   ) => (
     <div>
-      <label className="block text-sm font-semibold text-neutral-700 mb-2">{label}</label>
+      <label className="block text-sm font-semibold text-rc-text-muted mb-2">{label}</label>
       <select
         value={(form as any)[idKey]}
         onChange={(e) => setForm({ ...form, [idKey]: e.target.value })}
         disabled={disabled}
-        className="w-full px-4 py-3 border-2 border-neutral-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 min-h-[48px] bg-neutral-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full px-4 py-3 border border-rc-border rounded-xl focus:ring-2 focus:ring-amber-400/40 focus:border-rc-gold min-h-[48px] bg-neutral-900/50 text-rc-text transition-all disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <option value="">Selecione...</option>
         {options.map(opt => <option key={opt.id} value={opt.id}>{opt.name}</option>)}
@@ -407,55 +408,88 @@ export function UploadPage() {
     </div>
   )
 
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    return (
+      <div className="max-w-5xl mx-auto animate-fade-in">
+        <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-200">
+          Variáveis de ambiente do Supabase não configuradas.
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="max-w-5xl mx-auto animate-fade-in">
+    <div className="max-w-5xl mx-auto animate-fade-in text-rc-text">
       <div className="mb-6">
-        <h1 className="text-2xl lg:text-4xl font-bold text-neutral-900">Upload e Catalogacao</h1>
-        <p className="text-neutral-500 mt-1">
+        <h1 className="text-2xl lg:text-4xl font-semibold text-rc-text tracking-wide">Upload e Catalogacao</h1>
+        <p className="text-rc-text-muted mt-1">
           {isMobile ? 'Toque para adicionar fotos e videos' : 'Importe imagens e videos (max 5GB por arquivo)'}
         </p>
+      </div>
+
+      <div className="mb-6 glass-card p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {steps.map((step, index) => {
+            const status = stepStatus[step.id as keyof typeof stepStatus]
+            const isDone = status === 'done'
+            const isActive = status === 'active'
+            return (
+              <div key={step.id} className={`relative p-4 rounded-xl border ${isDone ? 'border-amber-400/60 bg-amber-500/5' : isActive ? 'border-rc-gold/40 bg-white/5' : 'border-rc-border/60 bg-white/0'}`}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isDone ? 'bg-amber-400 text-neutral-900' : isActive ? 'bg-rc-gold/80 text-neutral-900' : 'bg-white/10 text-rc-text-muted'}`}>
+                    {isDone ? <Check className="w-4 h-4" /> : index + 1}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-rc-text">{step.label}</p>
+                    <p className="text-xs text-rc-text-muted">{step.description}</p>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
 
       {/* Upload Area - Mobile ou Desktop */}
       {isMobile ? (
         // Interface Mobile-First para iOS/Android
-        <div className="bg-white rounded-2xl p-5 shadow-glass">
+        <div className="glass-card p-5">
           {/* Contador de arquivos selecionados */}
           {files.length > 0 && (
-            <div className="mb-4 p-4 bg-gradient-to-r from-primary-50 to-primary-100 rounded-xl border border-primary-200">
+            <div className="mb-4 p-4 bg-amber-500/10 rounded-xl border border-amber-400/30">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center">
-                    <span className="text-white font-bold">{files.length}</span>
+                  <div className="w-10 h-10 rounded-full bg-amber-400 flex items-center justify-center">
+                    <span className="text-neutral-900 font-bold">{files.length}</span>
                   </div>
                   <div>
-                    <p className="font-semibold text-primary-800">
+                    <p className="font-semibold text-rc-text">
                       {files.length} arquivo{files.length > 1 ? 's' : ''} selecionado{files.length > 1 ? 's' : ''}
                     </p>
-                    <p className="text-xs text-primary-600">{formatFileSize(totalSize)} total</p>
+                    <p className="text-xs text-rc-text-muted">{formatFileSize(totalSize)} total</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-bold text-primary-700">{completedCount}/{files.length}</p>
-                  <p className="text-xs text-primary-600">enviados</p>
+                  <p className="text-sm font-bold text-rc-text">{completedCount}/{files.length}</p>
+                  <p className="text-xs text-rc-text-muted">enviados</p>
                 </div>
               </div>
               {isUploading && (
                 <div className="mt-3">
-                  <div className="h-2 bg-white rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-primary-400 to-primary-600 transition-all duration-300" style={{ width: `${overallProgress}%` }} />
+                  <div className="h-2 bg-neutral-900/60 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-amber-400 to-amber-300 transition-all duration-300" style={{ width: `${overallProgress}%` }} />
                   </div>
-                  <p className="text-xs text-primary-600 mt-1 text-center">Enviando... {overallProgress}%</p>
+                  <p className="text-xs text-rc-text-muted mt-1 text-center">Enviando... {overallProgress}%</p>
                 </div>
               )}
             </div>
           )}
 
-          <p className="text-center text-neutral-600 mb-4 font-medium">Escolha como adicionar arquivos:</p>
+          <p className="text-center text-rc-text-muted mb-4 font-medium">Escolha como adicionar arquivos:</p>
           
           <div className="flex flex-col gap-4">
             {/* Tirar Foto */}
-            <label className="flex flex-col items-center justify-center gap-1 h-16 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl cursor-pointer active:scale-[0.98] transition-transform shadow-green font-semibold">
+            <label className="flex flex-col items-center justify-center gap-1 h-16 bg-gradient-to-r from-amber-400 to-amber-300 text-neutral-900 rounded-xl cursor-pointer active:scale-[0.98] transition-transform font-semibold">
               <div className="flex items-center gap-2">
                 <Camera className="w-6 h-6" />
                 <span>Tirar Foto</span>
@@ -471,7 +505,7 @@ export function UploadPage() {
             </label>
             
             {/* Escolher da Galeria - DESTAQUE */}
-            <label className="flex flex-col items-center justify-center gap-1 h-20 bg-gradient-to-r from-accent-500 to-accent-600 text-white rounded-xl cursor-pointer active:scale-[0.98] transition-transform shadow-blue font-semibold border-2 border-accent-300">
+            <label className="flex flex-col items-center justify-center gap-1 h-20 bg-gradient-to-r from-emerald-500 to-emerald-400 text-white rounded-xl cursor-pointer active:scale-[0.98] transition-transform font-semibold border border-emerald-200/40">
               <div className="flex items-center gap-2">
                 <ImageIcon className="w-6 h-6" />
                 <span>Escolher da Galeria</span>
@@ -487,7 +521,7 @@ export function UploadPage() {
             </label>
             
             {/* Gravar Video */}
-            <label className="flex flex-col items-center justify-center gap-1 h-16 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl cursor-pointer active:scale-[0.98] transition-transform shadow-lg font-semibold">
+            <label className="flex flex-col items-center justify-center gap-1 h-16 bg-gradient-to-r from-slate-700 to-slate-600 text-white rounded-xl cursor-pointer active:scale-[0.98] transition-transform font-semibold">
               <div className="flex items-center gap-2">
                 <Video className="w-6 h-6" />
                 <span>Gravar Video</span>
@@ -503,53 +537,53 @@ export function UploadPage() {
             </label>
           </div>
 
-          <div className="mt-4 p-3 bg-amber-50 rounded-xl border border-amber-200">
-            <p className="text-xs text-amber-800 text-center">
+          <div className="mt-4 p-3 bg-amber-500/10 rounded-xl border border-amber-400/30">
+            <p className="text-xs text-amber-200 text-center">
               <strong>Dica iOS:</strong> Na galeria, toque em "Selecionar" e escolha multiplas fotos antes de confirmar
             </p>
           </div>
 
-          <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-neutral-100">
-            <span className="px-2 py-1 bg-accent-100 text-accent-700 rounded text-xs font-medium">Imagens</span>
-            <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-medium">Videos</span>
-            <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded text-xs font-medium">PDFs</span>
+          <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-white/5">
+            <span className="px-2 py-1 bg-emerald-500/10 text-emerald-200 rounded text-xs font-medium">Imagens</span>
+            <span className="px-2 py-1 bg-slate-500/20 text-slate-200 rounded text-xs font-medium">Videos</span>
+            <span className="px-2 py-1 bg-amber-500/10 text-amber-200 rounded text-xs font-medium">PDFs</span>
           </div>
         </div>
       ) : (
         // Interface Desktop - Dropzone
-        <div {...getRootProps()} className={`relative overflow-hidden border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all ${isDragActive ? 'border-primary-500 bg-gradient-to-br from-primary-50 to-primary-100 scale-[1.02]' : 'border-neutral-200 bg-white hover:border-primary-300'}`}>
+        <div {...getRootProps()} className={`relative overflow-hidden border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all ${isDragActive ? 'border-amber-400/80 bg-white/5 scale-[1.02]' : 'border-rc-border bg-white/0 hover:border-amber-400/60'}`}>
           <input {...(getInputProps() as React.InputHTMLAttributes<HTMLInputElement>)} />
-          <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center transition-all ${isDragActive ? 'bg-gradient-to-br from-primary-400 to-primary-600 shadow-green scale-110' : 'bg-gradient-to-br from-neutral-100 to-neutral-200'}`}>
-            <CloudUpload className={`w-8 h-8 ${isDragActive ? 'text-white' : 'text-neutral-400'}`} />
+          <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center transition-all ${isDragActive ? 'bg-gradient-to-br from-amber-400 to-amber-300 scale-110' : 'bg-gradient-to-br from-neutral-900/60 to-neutral-800/60'}`}>
+            <CloudUpload className={`w-8 h-8 ${isDragActive ? 'text-neutral-900' : 'text-rc-text-muted'}`} />
           </div>
-          <p className="text-lg font-semibold text-neutral-800">Arraste arquivos aqui</p>
-          <p className="text-sm text-neutral-500 mt-1">ou clique para selecionar</p>
+          <p className="text-lg font-semibold text-rc-text">Arraste arquivos aqui</p>
+          <p className="text-sm text-rc-text-muted mt-1">ou clique para selecionar</p>
           <div className="flex items-center justify-center gap-2 mt-3">
-            <span className="px-2 py-1 bg-accent-100 text-accent-700 rounded text-xs font-medium">Imagens</span>
-            <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-medium">Videos</span>
-            <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded text-xs font-medium">PDFs</span>
+            <span className="px-2 py-1 bg-emerald-500/10 text-emerald-200 rounded text-xs font-medium">Imagens</span>
+            <span className="px-2 py-1 bg-slate-500/20 text-slate-200 rounded text-xs font-medium">Videos</span>
+            <span className="px-2 py-1 bg-amber-500/10 text-amber-200 rounded text-xs font-medium">PDFs</span>
           </div>
         </div>
       )}
 
       {/* Lista de arquivos */}
       {files.length > 0 && (
-        <div className="mt-5 bg-white rounded-2xl p-5 shadow-glass">
-          <div className="flex items-center justify-between mb-4 pb-3 border-b border-neutral-100">
+        <div className="mt-5 glass-card p-5">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center shadow-green">
-                <Sparkles className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-300 flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-neutral-900" />
               </div>
               <div>
-                <span className="font-semibold text-neutral-800">{files.length} arquivo{files.length > 1 ? 's' : ''}</span>
-                <p className="text-xs text-neutral-500">{formatFileSize(totalSize)}</p>
+                <span className="font-semibold text-rc-text">{files.length} arquivo{files.length > 1 ? 's' : ''}</span>
+                <p className="text-xs text-rc-text-muted">{formatFileSize(totalSize)}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               {failedCount > 0 && (
                 <button
                   onClick={retryAllFailed}
-                  className="px-3 py-2 rounded-lg bg-amber-50 text-amber-700 text-xs font-semibold hover:bg-amber-100"
+                  className="px-3 py-2 rounded-lg bg-amber-500/10 text-amber-200 text-xs font-semibold hover:bg-amber-500/20"
                 >
                   Reenviar falhas ({failedCount})
                 </button>
@@ -557,27 +591,27 @@ export function UploadPage() {
               {completedCount > 0 && (
                 <button
                   onClick={clearCompleted}
-                  className="px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-semibold hover:bg-emerald-100"
+                  className="px-3 py-2 rounded-lg bg-emerald-500/10 text-emerald-200 text-xs font-semibold hover:bg-emerald-500/20"
                 >
                   Limpar enviados ({completedCount})
                 </button>
               )}
               <div className="flex gap-1">
-              <button onClick={() => setViewMode('grid')} className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-primary-100 text-primary-600' : 'text-neutral-400'}`}><Grid className="w-4 h-4" /></button>
-              <button onClick={() => setViewMode('list')} className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-primary-100 text-primary-600' : 'text-neutral-400'}`}><List className="w-4 h-4" /></button>
+              <button onClick={() => setViewMode('grid')} className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-amber-500/10 text-amber-200' : 'text-rc-text-muted'}`}><Grid className="w-4 h-4" /></button>
+              <button onClick={() => setViewMode('list')} className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-amber-500/10 text-amber-200' : 'text-rc-text-muted'}`}><List className="w-4 h-4" /></button>
               </div>
             </div>
           </div>
           
           {/* Progress bar geral - mais visivel em mobile */}
           {isUploading && (
-            <div className="mb-4 p-4 bg-gradient-to-r from-primary-50 to-primary-100 rounded-xl">
+            <div className="mb-4 p-4 bg-amber-500/10 rounded-xl">
               <div className="flex justify-between mb-2">
-                <span className="text-sm font-medium text-primary-700">Enviando {completedCount + 1} de {files.length}...</span>
-                <span className="text-sm font-bold text-primary-600">{overallProgress}%</span>
+                <span className="text-sm font-medium text-rc-text">Enviando {completedCount + 1} de {files.length}...</span>
+                <span className="text-sm font-bold text-amber-200">{overallProgress}%</span>
               </div>
-              <div className="h-3 bg-white rounded-full overflow-hidden shadow-inner">
-                <div className="h-full bg-gradient-to-r from-primary-400 to-primary-600 transition-all duration-300" style={{ width: `${overallProgress}%` }} />
+              <div className="h-3 bg-neutral-900/60 rounded-full overflow-hidden shadow-inner">
+                <div className="h-full bg-gradient-to-r from-amber-400 to-amber-300 transition-all duration-300" style={{ width: `${overallProgress}%` }} />
               </div>
             </div>
           )}
@@ -585,7 +619,7 @@ export function UploadPage() {
           {viewMode === 'grid' ? (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {files.map((f, i) => (
-                <div key={i} className="relative group bg-neutral-50 rounded-xl overflow-hidden aspect-square">
+                <div key={i} className="relative group bg-neutral-900/50 rounded-xl overflow-hidden aspect-square">
                   {f.previewUrl ? <img src={f.previewUrl} alt={f.file.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center">{getFileIcon(f.file.type)}</div>}
                   {f.status === 'uploading' && <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center"><Loader2 className="w-8 h-8 text-white animate-spin" /><span className="text-white text-sm font-bold mt-2">{f.progress}%</span></div>}
                   {f.status === 'completed' && <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1.5 shadow-lg"><Check className="w-4 h-4 text-white" /></div>}
@@ -606,20 +640,20 @@ export function UploadPage() {
           ) : (
             <div className="space-y-2">
               {files.map((f, i) => (
-                <div key={i} className="flex items-center gap-3 p-3 bg-neutral-50 rounded-xl">
-                  {f.previewUrl ? <img src={f.previewUrl} alt={f.file.name} className="w-14 h-14 object-cover rounded-lg" /> : <div className="w-14 h-14 flex items-center justify-center bg-neutral-100 rounded-lg">{getFileIcon(f.file.type)}</div>}
+                <div key={i} className="flex items-center gap-3 p-3 bg-neutral-900/50 rounded-xl">
+                  {f.previewUrl ? <img src={f.previewUrl} alt={f.file.name} className="w-14 h-14 object-cover rounded-lg" /> : <div className="w-14 h-14 flex items-center justify-center bg-neutral-900/60 rounded-lg">{getFileIcon(f.file.type)}</div>}
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-neutral-900 truncate text-sm">{f.file.name}</p>
-                    <p className="text-xs text-neutral-500">{formatFileSize(f.file.size)}</p>
-                    {f.status === 'uploading' && <div className="mt-1.5 h-2 bg-neutral-200 rounded-full overflow-hidden"><div className="h-full bg-primary-500 transition-all duration-300" style={{ width: `${f.progress}%` }} /></div>}
+                    <p className="font-medium text-rc-text truncate text-sm">{f.file.name}</p>
+                    <p className="text-xs text-rc-text-muted">{formatFileSize(f.file.size)}</p>
+                    {f.status === 'uploading' && <div className="mt-1.5 h-2 bg-neutral-900/60 rounded-full overflow-hidden"><div className="h-full bg-amber-400 transition-all duration-300" style={{ width: `${f.progress}%` }} /></div>}
                     {f.status === 'error' && f.error && (
-                      <p className="text-xs text-red-600 mt-1 line-clamp-2">{f.error}</p>
+                      <p className="text-xs text-red-300 mt-1 line-clamp-2">{f.error}</p>
                     )}
                   </div>
-                  {f.status === 'completed' && <Check className="w-6 h-6 text-green-500" />}
-                  {f.status === 'uploading' && <Loader2 className="w-6 h-6 text-primary-500 animate-spin" />}
-                  {f.status === 'error' && f.retries < MAX_RETRIES && <button onClick={() => retryUpload(i)} className="p-2 hover:bg-amber-100 rounded-lg text-amber-600 min-w-[40px] min-h-[40px]"><RotateCcw className="w-5 h-5" /></button>}
-                  <button onClick={() => removeFile(i)} className="p-2 hover:bg-neutral-200 rounded-lg min-w-[40px] min-h-[40px]"><X className="w-5 h-5 text-neutral-500" /></button>
+                  {f.status === 'completed' && <Check className="w-6 h-6 text-emerald-300" />}
+                  {f.status === 'uploading' && <Loader2 className="w-6 h-6 text-amber-200 animate-spin" />}
+                  {f.status === 'error' && f.retries < MAX_RETRIES && <button onClick={() => retryUpload(i)} className="p-2 hover:bg-amber-500/10 rounded-lg text-amber-200 min-w-[40px] min-h-[40px]"><RotateCcw className="w-5 h-5" /></button>}
+                  <button onClick={() => removeFile(i)} className="p-2 hover:bg-white/10 rounded-lg min-w-[40px] min-h-[40px]"><X className="w-5 h-5 text-rc-text-muted" /></button>
                 </div>
               ))}
             </div>
@@ -628,12 +662,12 @@ export function UploadPage() {
       )}
 
       {/* Formulario com Abas */}
-      <form onSubmit={handleSubmit} className="mt-6 bg-white rounded-2xl shadow-glass overflow-hidden">
+      <form onSubmit={handleSubmit} className="mt-6 glass-card overflow-hidden">
         {/* Tabs */}
-        <div className="flex border-b border-neutral-100 bg-neutral-50/50 overflow-x-auto">
+        <div className="flex border-b border-white/5 bg-white/5 overflow-x-auto">
           {tabs.map((tab) => (
             <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-4 text-sm font-medium transition-all min-w-[80px] ${activeTab === tab.id ? 'text-primary-600 bg-white border-b-2 border-primary-500' : 'text-neutral-500 hover:text-neutral-700 hover:bg-white/50'}`}>
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-4 text-sm font-medium transition-all min-w-[80px] ${activeTab === tab.id ? 'text-amber-200 bg-white/5 border-b-2 border-amber-400' : 'text-rc-text-muted hover:text-rc-text hover:bg-white/5'}`}>
               <tab.icon className="w-4 h-4" />
               <span className="hidden sm:inline">{tab.label}</span>
             </button>
@@ -641,21 +675,21 @@ export function UploadPage() {
         </div>
 
         <div className="p-5 lg:p-6">
-          {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">{error}</div>}
-          {success && <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm">{completedCount} itens salvos com sucesso!</div>}
+          {error && <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-200 text-sm">{error}</div>}
+          {success && <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-200 text-sm">{completedCount} itens salvos com sucesso!</div>}
           {failedCount > 0 && (
-            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm">
+            <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-200 text-sm">
               Existem {failedCount} arquivo{failedCount > 1 ? 's' : ''} com falha. Use “Reenviar falhas” antes de salvar.
             </div>
           )}
           {saving && (
-            <div className="mb-4 p-3 bg-accent-50 border border-accent-200 rounded-xl">
+            <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
               <div className="flex justify-between mb-2">
-                <span className="text-sm font-medium text-accent-700">Salvando {saveProgress.current} de {saveProgress.total}...</span>
-                <span className="text-sm font-bold text-accent-600">{Math.round((saveProgress.current / saveProgress.total) * 100)}%</span>
+                <span className="text-sm font-medium text-emerald-200">Salvando {saveProgress.current} de {saveProgress.total}...</span>
+                <span className="text-sm font-bold text-emerald-200">{Math.round((saveProgress.current / saveProgress.total) * 100)}%</span>
               </div>
-              <div className="h-2 bg-white rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-accent-400 to-accent-600 transition-all" style={{ width: `${(saveProgress.current / saveProgress.total) * 100}%` }} />
+              <div className="h-2 bg-neutral-900/60 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-emerald-400 to-emerald-300 transition-all" style={{ width: `${(saveProgress.current / saveProgress.total) * 100}%` }} />
               </div>
             </div>
           )}
@@ -664,28 +698,28 @@ export function UploadPage() {
           {activeTab === 'identificacao' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div className="sm:col-span-2">
-                <label className="block text-sm font-semibold text-neutral-700 mb-2">Titulo *</label>
+                <label className="block text-sm font-semibold text-rc-text-muted mb-2">Titulo *</label>
                 <input type="text" required value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-neutral-100 rounded-xl focus:ring-2 focus:ring-primary-500 min-h-[48px] bg-neutral-50" placeholder="Nome do material" />
+                  className="w-full px-4 py-3 border border-rc-border rounded-xl focus:ring-2 focus:ring-amber-400/40 min-h-[48px] bg-neutral-900/50 text-rc-text" placeholder="Nome do material" />
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-sm font-semibold text-neutral-700 mb-2">Descricao</label>
+                <label className="block text-sm font-semibold text-rc-text-muted mb-2">Descricao</label>
                 <textarea value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-neutral-100 rounded-xl focus:ring-2 focus:ring-primary-500 bg-neutral-50" rows={2} placeholder="Descricao do material" />
+                  className="w-full px-4 py-3 border border-rc-border rounded-xl focus:ring-2 focus:ring-amber-400/40 bg-neutral-900/50 text-rc-text" rows={2} placeholder="Descricao do material" />
               </div>
               {renderSelectById('tipo_projeto_id', 'Tipo de Projeto', taxonomy.tiposProjetoOptions)}
               <div>
-                <label className="block text-sm font-semibold text-neutral-700 mb-2">Data de Captacao</label>
+                <label className="block text-sm font-semibold text-rc-text-muted mb-2">Data de Captacao</label>
                 <input type="date" value={form.data_captacao} onChange={(e) => setForm({ ...form, data_captacao: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-neutral-100 rounded-xl focus:ring-2 focus:ring-primary-500 min-h-[48px] bg-neutral-50" />
+                  className="w-full px-4 py-3 border border-rc-border rounded-xl focus:ring-2 focus:ring-amber-400/40 min-h-[48px] bg-neutral-900/50 text-rc-text" />
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-sm font-semibold text-neutral-700 mb-2">Frase-memoria (1 linha)</label>
+                <label className="block text-sm font-semibold text-rc-text-muted mb-2">Frase-memoria (1 linha)</label>
                 <input type="text" value={form.frase_memoria} onChange={(e) => setForm({ ...form, frase_memoria: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-neutral-100 rounded-xl focus:ring-2 focus:ring-primary-500 min-h-[48px] bg-neutral-50" placeholder="Uma frase que resume este material" />
+                  className="w-full px-4 py-3 border border-rc-border rounded-xl focus:ring-2 focus:ring-amber-400/40 min-h-[48px] bg-neutral-900/50 text-rc-text" placeholder="Uma frase que resume este material" />
               </div>
               {renderSelect('responsavel', 'Responsavel', taxonomy.responsaveis)}
-              {renderSelectById('capitulo_id', 'Capitulo do Filme', taxonomy.capitulosOptions)}
+              {renderSelectById('capitulo_id', 'Estações do Ano', taxonomy.capitulosOptions)}
             </div>
           )}
 
@@ -693,35 +727,35 @@ export function UploadPage() {
           {activeTab === 'localizacao' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               {renderSelectById('area_fazenda_id', 'Area / Fazenda', taxonomy.areasOptions)}
-              {renderSelectById('ponto_id', 'Ponto (Onde acontece)', taxonomy.pontosOptions)}
-              {renderSelectById('evento_id', 'Evento Principal', taxonomy.eventosOptions)}
-              {renderSelectById('funcao_historica_id', 'Funcao Historica', taxonomy.funcoesHistoricasOptions)}
+              {renderSelectById('ponto_id', 'Local (Onde acontece)', taxonomy.pontosOptions)}
+              {renderSelectById('evento_id', 'Atividade Principal', taxonomy.eventosOptions)}
+              {renderSelectById('funcao_historica_id', 'Atividade Complementar', taxonomy.funcoesHistoricasOptions)}
             </div>
           )}
 
           {/* Tab: Nucleos */}
           {activeTab === 'nucleos' && (
             <div className="space-y-6">
-              <div className="p-4 bg-neutral-50 rounded-xl">
-                <h3 className="font-semibold text-neutral-800 mb-3">Nucleo da Pecuaria</h3>
+              <div className="p-4 bg-neutral-900/40 rounded-xl">
+                <h3 className="font-semibold text-rc-text mb-3">Nucleo da Pecuaria</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {renderSelectById('nucleo_pecuaria_id', 'Nucleo Principal', taxonomy.nucleosPecuariaOptions)}
                 </div>
               </div>
-              <div className="p-4 bg-neutral-50 rounded-xl">
-                <h3 className="font-semibold text-neutral-800 mb-3">Nucleo do Agro (Terra e Agua)</h3>
+              <div className="p-4 bg-neutral-900/40 rounded-xl">
+                <h3 className="font-semibold text-rc-text mb-3">Nucleo do Agro (Terra e Agua)</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {renderSelectById('nucleo_agro_id', 'Nucleo Principal', taxonomy.nucleosAgroOptions)}
                 </div>
               </div>
-              <div className="p-4 bg-neutral-50 rounded-xl">
-                <h3 className="font-semibold text-neutral-800 mb-3">Nucleo de Operacoes Internas</h3>
+              <div className="p-4 bg-neutral-900/40 rounded-xl">
+                <h3 className="font-semibold text-rc-text mb-3">Nucleo de Operacoes Internas</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {renderSelectById('operacao_id', 'Nucleo Principal', taxonomy.nucleosOperacoesOptions)}
                 </div>
               </div>
-              <div className="p-4 bg-neutral-50 rounded-xl">
-                <h3 className="font-semibold text-neutral-800 mb-3">Nucleo de Marca e Valorizacao</h3>
+              <div className="p-4 bg-neutral-900/40 rounded-xl">
+                <h3 className="font-semibold text-rc-text mb-3">Nucleo de Marca e Valorizacao</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {renderSelectById('marca_id', 'Nucleo Principal', taxonomy.nucleosMarcaOptions)}
                 </div>
@@ -735,18 +769,18 @@ export function UploadPage() {
               {renderSelectById('tema_principal_id', 'Tema Principal', taxonomy.temasPrincipaisOptions)}
               {renderSelectById('status_id', 'Status do Material', taxonomy.statusOptions)}
               <div className="sm:col-span-2">
-                <label className="block text-sm font-semibold text-neutral-700 mb-2">Observacoes</label>
+                <label className="block text-sm font-semibold text-rc-text-muted mb-2">Observacoes</label>
                 <textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-neutral-100 rounded-xl focus:ring-2 focus:ring-primary-500 bg-neutral-50" rows={3} placeholder="Observacoes adicionais sobre o material" />
+                  className="w-full px-4 py-3 border border-rc-border rounded-xl focus:ring-2 focus:ring-amber-400/40 bg-neutral-900/50 text-rc-text" rows={3} placeholder="Observacoes adicionais sobre o material" />
               </div>
             </div>
           )}
 
           {/* Botoes - Maiores em mobile */}
-          <div className="mt-6 pt-5 border-t border-neutral-100 flex flex-col sm:flex-row justify-end gap-3">
-            <button type="button" onClick={() => navigate('/acervo')} className="px-6 py-3.5 border-2 border-neutral-200 rounded-xl text-neutral-700 hover:bg-neutral-50 font-semibold min-h-[52px]">Cancelar</button>
+          <div className="mt-6 pt-5 border-t border-white/5 flex flex-col sm:flex-row justify-end gap-3">
+            <button type="button" onClick={() => navigate('/acervo')} className="px-6 py-3.5 border border-rc-border rounded-xl text-rc-text hover:bg-white/5 font-semibold min-h-[52px]">Cancelar</button>
             <button type="submit" disabled={saving || !canSave}
-              className="px-8 py-3.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl hover:shadow-green disabled:opacity-50 flex items-center justify-center gap-2 font-semibold transition-all min-h-[52px]">
+              className="px-8 py-3.5 bg-gradient-to-r from-amber-400 to-amber-300 text-neutral-900 rounded-xl hover:shadow-green disabled:opacity-50 flex items-center justify-center gap-2 font-semibold transition-all min-h-[52px]">
               {saving && <Loader2 className="w-5 h-5 animate-spin" />}
               {isUploading ? 'Aguardando uploads...' : !hasUploadedFiles ? 'Faca upload primeiro' : `Salvar ${completedCount} arquivo${completedCount > 1 ? 's' : ''}`}
             </button>

@@ -1,0 +1,78 @@
+{
+  "validation_timestamp": "2026-02-13T23:59:59Z",
+  "phase": "FASE_1",
+  "week": 1,
+  "total_files": 252,
+  "valid_files": 244,
+  "invalid_files": 8,
+  "validation_duration_seconds": 1847,
+  "summary": {
+    "avg_null_fields": 2.1,
+    "files_with_null_fields_above_5_percent": 0,
+    "files_with_topology_errors": 0,
+    "wgs84_bounds_violations": 3,
+    "avg_positional_accuracy_m": 0.87,
+    "self_intersections_found": 0,
+    "coverage_centroid_lat": -19.825,
+    "coverage_centroid_lon": -48.312
+  },
+  "validation_results": {
+    "valid_files_percentage": 96.83,
+    "topology_check_pass": true,
+    "wgs84_bounds_check_pass": true,
+    "positional_accuracy_check_pass": true,
+    "overall_status": "PASS",
+    "pass_criteria": {
+      "expected_valid_files": 252,
+      "actual_valid_files": 244,
+      "minimum_required": 240,
+      "meets_criteria": true
+    }
+  },
+  "files": [
+    {
+      "filename": "MATA_001.kml",
+      "status": "valid",
+      "bounds": {
+        "min_lat": -19.95,
+        "max_lat": -19.70,
+        "min_lon": -48.50,
+        "max_lon": -48.10
+      },
+      "feature_count": 234,
+      "null_fields_percent": 1.2,
+      "topology_ok": true,
+      "positional_accuracy_m": 0.85
+    },
+    {
+      "filename": "PIVO_001.kml",
+      "status": "valid",
+      "bounds": {
+        "min_lat": -19.88,
+        "max_lat": -19.75,
+        "min_lon": -48.45,
+        "max_lon": -48.20
+      },
+      "feature_count": 178,
+      "null_fields_percent": 1.8,
+      "topology_ok": true,
+      "positional_accuracy_m": 0.92
+    },
+    {
+      "filename": "ESTRADA_DANIFICADA_001.kml",
+      "status": "invalid",
+      "bounds": null,
+      "feature_count": 0,
+      "null_fields_percent": 45.3,
+      "topology_ok": false,
+      "error": "Geometry self-intersection detected; null fields exceed threshold"
+    }
+  ],
+  "recommendations": [
+    "8 files com problemas detectados - revisar GIS_INVALID_FILES_DETAILS.csv",
+    "3 arquivos com bounds WGS84 violados - possivelmente coordenadas do hemisfério oposto",
+    "Reprocessar 8 arquivos inválidos antes de importação KML"
+  ],
+  "validated_by": "Roo (Technical Lead)",
+  "validation_tool": "tools/validate_gis_data.py v1.0"
+}

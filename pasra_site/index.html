@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Portal Mestre - Villa Canabrava + BibliotecaRC</title>
+    <meta name="description" content="Portal mestre do projeto Villa Canabrava e BibliotecaRC. Fundacao, escopo, arquitetura, pipeline e execucao consolidada." />
+    <link rel="stylesheet" href="assets/css/site.css" />
+  </head>
+  <body>
+    <div class="bg-veil"></div>
+    <header class="site-header">
+      <div class="container">
+        <div class="brand">
+          <div class="brand-mark">VC</div>
+          <div class="brand-text">
+            <div class="brand-title">Portal Mestre</div>
+            <div class="brand-subtitle">Villa Canabrava + BibliotecaRC</div>
+          </div>
+        </div>
+        <nav class="site-nav">
+          <a href="#visao">Visao</a>
+          <a href="#fundacao">Fundacao</a>
+          <a href="#escopo">Escopo</a>
+          <a href="#digital-twin">Digital Twin</a>
+          <a href="#gis">GIS</a>
+          <a href="#pipeline">Pipeline</a>
+          <a href="#governanca">Governanca</a>
+          <a href="#roadmap">Roadmap</a>
+          <a href="#biblioteca">BibliotecaRC</a>
+          <a href="#status">Status</a>
+        </nav>
+        <button class="nav-toggle" aria-label="Abrir menu">Menu</button>
+      </div>
+    </header>
+
+    <main>
+      <section id="visao" class="hero">
+        <div class="container hero-grid">
+          <div class="hero-copy">
+            <p class="eyebrow">Fundacao, execucao e governanca em um unico lugar</p>
+            <h1>Universo Virtual Villa Canabrava e BibliotecaRC</h1>
+            <p class="lead">
+              Esta pasta exclusiva consolida diretrizes, arquitetura, plano de execucao e status do projeto.
+              O objetivo e manter a construcao completa, exportavel e resiliente no tempo.
+            </p>
+            <div class="hero-actions">
+              <a class="btn primary" href="#fundacao">Ver fundacao atemporal</a>
+              <a class="btn ghost" href="#digital-twin">Plano Digital Twin</a>
+            </div>
+            <div class="hero-metrics">
+              <div>
+                <span class="metric">7.729 ha</span>
+                <span class="metric-label">territorio mapeado</span>
+              </div>
+              <div>
+                <span class="metric">252</span>
+                <span class="metric-label">camadas KML</span>
+              </div>
+              <div>
+                <span class="metric">9</span>
+                <span class="metric-label">etapas de workflow</span>
+              </div>
+            </div>
+          </div>
+          <div class="hero-card">
+            <h2>Mapa do Projeto</h2>
+            <ul class="pill-list">
+              <li>Fundacao atemporal</li>
+              <li>Digital Twin geoespacial</li>
+              <li>Pipeline de assets duravel</li>
+              <li>Governanca e preservacao</li>
+              <li>BibliotecaRC (acervo)</li>
+            </ul>
+            <div class="mini-grid">
+              <div class="mini-card">
+                <span class="mini-title">Padroes</span>
+                <span class="mini-body">OpenXR, WebGPU, glTF, OpenUSD, OGC 3D Tiles</span>
+              </div>
+              <div class="mini-card">
+                <span class="mini-title">Infra</span>
+                <span class="mini-body">Kubernetes, PostGIS, S3, CI/CD</span>
+              </div>
+              <div class="mini-card">
+                <span class="mini-title">Entrega</span>
+                <span class="mini-body">Museu web 3D, biblioteca digital, exportacao aberta</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="fundacao" class="section">
+        <div class="container">
+          <div class="section-header">
+            <p class="eyebrow">Fundacao atemporal</p>
+            <h2>Leis invariantes e arquitetura de longo prazo</h2>
+            <p class="section-lead">Standards-first, separacao radical entre mundo e engine, preservacao e governanca.</p>
+          </div>
+          <div class="grid-3">
+            <div class="card">
+              <h3>7 leis fundamentais</h3>
+              <ol class="numbered">
+                <li>Standards-first</li>
+                <li>Mundo diferente da engine</li>
+                <li>Pipeline de conteudo duravel</li>
+                <li>Persistencia com snapshots e logs</li>
+                <li>Interoperabilidade no centro</li>
+                <li>Escalabilidade horizontal</li>
+                <li>Governanca transparente</li>
+              </ol>
+            </div>
+            <div class="card">
+              <h3>Arquitetura em 6 camadas</h3>
+              <ul class="bullets">
+                <li>Clientes substituiveis (web, VR, mobile)</li>
+                <li>API Gateway com auth, cache e metricas</li>
+                <li>Servicos de dominio (world, GIS, museum)</li>
+                <li>Simulacao autoritativa</li>
+                <li>Persistencia (PostGIS, Mongo, Redis, S3)</li>
+                <li>Infraestrutura substituivel</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>Padrões obrigatorios</h3>
+              <ul class="bullets">
+                <li>OpenXR, WebXR, WebGPU</li>
+                <li>glTF 2.0 + Draco + KTX2</li>
+                <li>OpenUSD como fonte</li>
+                <li>QUIC + HTTP/3</li>
+                <li>OGC 3D Tiles e GeoJSON</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="escopo" class="section alt">
+        <div class="container">
+          <div class="section-header">
+            <p class="eyebrow">Escopo fase 1</p>
+            <h2>Digital Twin + Museu + Biblioteca</h2>
+            <p class="section-lead">Entrega de fundacao com dados confiaveis e interoperaveis.</p>
+          </div>
+          <div class="split">
+            <div class="card">
+              <h3>No escopo</h3>
+              <ul class="bullets">
+                <li>Conversao de 252 camadas KML para GeoJSON/PostGIS</li>
+                <li>Modelo de terreno e vetorizacao 3D</li>
+                <li>Museu virtual web 3D (MVP)</li>
+                <li>Biblioteca digital com busca e metadados</li>
+                <li>CI/CD e repositorio com governanca</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>Fora do escopo</h3>
+              <ul class="bullets">
+                <li>MMO e multiplayer massivo</li>
+                <li>Fisica complexa em tempo real</li>
+                <li>Integracao IoT em tempo real</li>
+                <li>Experiencia VR/AR completa</li>
+                <li>Economia virtual e marketplace</li>
+              </ul>
+            </div>
+          </div>
+          <div class="milestones">
+            <div class="milestone">
+              <span class="milestone-title">MS-01</span>
+              <span class="milestone-body">Frozen Geo: dados KML processados</span>
+            </div>
+            <div class="milestone">
+              <span class="milestone-title">MS-02</span>
+              <span class="milestone-body">Whitebox Museum: estrutura navegavel</span>
+            </div>
+            <div class="milestone">
+              <span class="milestone-title">MS-03</span>
+              <span class="milestone-body">Alpha Release com dados reais</span>
+            </div>
+            <div class="milestone">
+              <span class="milestone-title">MS-04</span>
+              <span class="milestone-body">Foundation Complete</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="digital-twin" class="section">
+        <div class="container">
+          <div class="section-header">
+            <p class="eyebrow">Plano de execucao</p>
+            <h2>Genesis do Digital Twin</h2>
+            <p class="section-lead">ETL geoespacial com enriquecimento semantico e exportacao aberta.</p>
+          </div>
+          <div class="grid-4">
+            <div class="step-card">
+              <span class="step">Etapa 1</span>
+              <h3>Ingestao e limpeza</h3>
+              <p>Leitura recursiva KML, padronizacao WGS84, correcoes geometricas.</p>
+            </div>
+            <div class="step-card">
+              <span class="step">Etapa 2</span>
+              <h3>Validacao topologica</h3>
+              <p>Checagem de sobreposicoes, areas e integridade.</p>
+            </div>
+            <div class="step-card">
+              <span class="step">Etapa 3</span>
+              <h3>Enriquecimento semantico</h3>
+              <p>Tags de gameplay, classes, animacoes e metadados.</p>
+            </div>
+            <div class="step-card">
+              <span class="step">Etapa 4</span>
+              <h3>Exportacao final</h3>
+              <p>GeoJSON mestre pronto para Unity/Unreal.</p>
+            </div>
+          </div>
+          <div class="note">
+            <strong>Arquivo mestre:</strong> VILLA_CANABRAVA_DIGITAL_TWIN_GOLDEN.geojson (251 objetos).
+          </div>
+        </div>
+      </section>
+
+      <section id="gis" class="section alt">
+        <div class="container">
+          <div class="section-header">
+            <p class="eyebrow">Base geoespacial</p>
+            <h2>Inventario GIS e precisao</h2>
+          </div>
+          <div class="grid-3">
+            <div class="card">
+              <h3>Metricas chave</h3>
+              <ul class="bullets">
+                <li>Area total: 7.729,26 ha</li>
+                <li>Perimetro: 58,21 km</li>
+                <li>Sistema: WGS84 (EPSG:4326)</li>
+                <li>252 camadas KML</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>Principais camadas</h3>
+              <ul class="bullets">
+                <li>7 pivôs irrigados</li>
+                <li>19 pocos artesianos</li>
+                <li>312 cercas</li>
+                <li>154 matas nativas</li>
+                <li>8 areas de APP</li>
+                <li>15 reservas legais</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>Relatorio topologico</h3>
+              <p>Integridade aprovada, mas soma de areas indica sobreposicao entre camadas.</p>
+              <p class="muted">Delta: 49,29% acima do total, esperado em sobreposicoes.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="pipeline" class="section">
+        <div class="container">
+          <div class="section-header">
+            <p class="eyebrow">Pipeline de assets</p>
+            <h2>Do master ao runtime</h2>
+          </div>
+          <div class="grid-2">
+            <div class="card">
+              <h3>Fluxo principal</h3>
+              <ul class="bullets">
+                <li>Fonte: OpenUSD (.usda/.usdc)</li>
+                <li>Intermediario: glTF 2.0</li>
+                <li>Runtime: glTF + Draco + KTX2</li>
+                <li>Streaming: OGC 3D Tiles</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>Estrutura de diretorios</h3>
+              <pre class="code">assets/
+  source/
+  intermediate/
+  runtime/
+  archive/</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="governanca" class="section alt">
+        <div class="container">
+          <div class="section-header">
+            <p class="eyebrow">Governanca</p>
+            <h2>Versionamento, preservacao e conformidade</h2>
+          </div>
+          <div class="grid-3">
+            <div class="card">
+              <h3>SemVer total</h3>
+              <ul class="bullets">
+                <li>Versao do mundo</li>
+                <li>Versao de esquema</li>
+                <li>Versao de asset</li>
+                <li>Versao de API</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>Preservacao 3-2-1-1-0</h3>
+              <ul class="bullets">
+                <li>Snapshots periodicos</li>
+                <li>Event log auditavel</li>
+                <li>Exports em formatos abertos</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>Checklist de conformidade</h3>
+              <ul class="bullets">
+                <li>Padrões e protocolos</li>
+                <li>Arquitetura e escalabilidade</li>
+                <li>Pipeline e entrega</li>
+                <li>Auditoria e interoperabilidade</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="roadmap" class="section">
+        <div class="container">
+          <div class="section-header">
+            <p class="eyebrow">Roadmap atemporal</p>
+            <h2>Fases de implementacao</h2>
+          </div>
+          <div class="timeline">
+            <div class="timeline-item">
+              <span class="time">Fase 0</span>
+              <div>
+                <h3>Fundacao (Semanas 1-4)</h3>
+                <p>Setup de repos, padroes, CI/CD, banco e pipeline de assets.</p>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <span class="time">Fase 1</span>
+              <div>
+                <h3>Vertical Slice (Semanas 5-12)</h3>
+                <p>Sede Villa Terezinha completa e trocavel entre clientes.</p>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <span class="time">Fase 2</span>
+              <div>
+                <h3>Expansao (Semanas 13-24)</h3>
+                <p>Sharding e expansao para toda a fazenda.</p>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <span class="time">Fase 3</span>
+              <div>
+                <h3>Confiabilidade (Semanas 25-36)</h3>
+                <p>Observabilidade, auditoria e resiliencia production-ready.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="biblioteca" class="section alt">
+        <div class="container">
+          <div class="section-header">
+            <p class="eyebrow">BibliotecaRC</p>
+            <h2>Acervo digital e workflow de midia</h2>
+          </div>
+          <div class="grid-2">
+            <div class="card">
+              <h3>Stack e paginas</h3>
+              <ul class="bullets">
+                <li>React + Vite + Tailwind + TypeScript</li>
+                <li>Supabase (DB, Auth, Storage, Functions)</li>
+                <li>Rotas: dashboard, acervo, upload, workflow, admin</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>Workflow de 9 etapas</h3>
+              <ol class="numbered">
+                <li>Entrada</li>
+                <li>Em triagem</li>
+                <li>Catalogado</li>
+                <li>Selecionado</li>
+                <li>Em producao</li>
+                <li>Em aprovacao</li>
+                <li>Aprovado</li>
+                <li>Publicado</li>
+                <li>Arquivado</li>
+              </ol>
+            </div>
+          </div>
+          <div class="note">
+            Upload resiliente via TUS (ate 5GB), audit trail, RLS e controle de usuarios.
+          </div>
+        </div>
+      </section>
+
+      <section id="status" class="section">
+        <div class="container">
+          <div class="section-header">
+            <p class="eyebrow">Status atual</p>
+            <h2>Execucao e pendencias</h2>
+          </div>
+          <div class="grid-3">
+            <div class="card">
+              <h3>Entregas concluidas</h3>
+              <ul class="bullets">
+                <li>Edge Functions e pipeline de upload</li>
+                <li>RLS hardening e auditoria</li>
+                <li>Dashboard e alertas</li>
+                <li>Reforma visual concluida</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>Pendencias recomendadas</h3>
+              <ul class="bullets">
+                <li>Teste de carga controlado</li>
+                <li>Validacao final de contrastes</li>
+                <li>Revisao de areas sobrepostas GIS</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>Indicadores de risco</h3>
+              <ul class="bullets">
+                <li>Sobreposicao de areas no GIS</li>
+                <li>Performance web em dispositivos fracos</li>
+                <li>Dependencia de processos externos (CloudConvert)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div>
+          <strong>Portal Mestre</strong>
+          <p>Consolidacao completa do projeto para exportacao e transmissao integral.</p>
+        </div>
+        <div class="footer-meta">
+          <span>Data de consolidacao: 05/02/2026</span>
+          <span>Formato: HTML/CSS/JS estatico</span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="assets/js/site.js"></script>
+  </body>
+</html>

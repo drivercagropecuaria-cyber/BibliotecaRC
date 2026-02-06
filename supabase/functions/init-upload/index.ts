@@ -9,8 +9,8 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: { code: 'METHOD_NOT_ALLOWED' } }, 405)
   }
 
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')?.trim()
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')?.trim()
   if (!supabaseUrl || !serviceRoleKey) {
     return jsonResponse({ error: { code: 'CONFIG_ERROR' } }, 500)
   }

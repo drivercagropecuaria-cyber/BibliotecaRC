@@ -3,12 +3,23 @@ import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { TAXONOMY_TYPES, invalidateCache, type TaxonomyItem, type NamingRule } from '@/lib/taxonomy'
 import { queryKeys } from '@/hooks/useQueries'
-import { Plus, Trash2, Edit2, Save, X, GripVertical, Eye, EyeOff, Settings, Tag, FileText, ChevronRight, ChevronDown, Loader2, Check, AlertCircle, Video, Image as ImageIcon, Wrench, History, RefreshCcw, ListChecks, Activity } from 'lucide-react'
+import { Plus, Trash2, Edit2, Save, X, GripVertical, Eye, EyeOff, Settings, Tag, FileText, ChevronRight, ChevronDown, Loader2, Check, AlertCircle, Video, Image as ImageIcon, Wrench, History, RefreshCcw, ListChecks, Activity, Users, UserPlus, UserCheck, UserX } from 'lucide-react'
 import { generateVideoThumbnail } from '@/utils/videoThumbnail'
+
+type AdminUserRole = 'admin' | 'editor' | 'viewer'
+
+type AdminUserRow = {
+  id: string
+  email: string
+  nome: string | null
+  role: AdminUserRole
+  created_at: string
+  deleted_at: string | null
+}
 
 export function AdminPage() {
   const queryClient = useQueryClient()
-  const [activeSection, setActiveSection] = useState<'taxonomy' | 'naming' | 'tools'>('taxonomy')
+  const [activeSection, setActiveSection] = useState<'taxonomy' | 'naming' | 'users' | 'tools'>('taxonomy')
   const [selectedType, setSelectedType] = useState(TAXONOMY_TYPES[0].key)
   const [taxonomy, setTaxonomy] = useState<TaxonomyItem[]>([])
   const [namingRules, setNamingRules] = useState<NamingRule[]>([])
@@ -27,6 +38,16 @@ export function AdminPage() {
     titulo: 'Manejo',
     data_captacao: '2024-06-15',
     extensao: 'mp4'
+  })
+  const [users, setUsers] = useState<AdminUserRow[]>([])
+  const [usersLoading, setUsersLoading] = useState(false)
+  const [usersSaving, setUsersSaving] = useState(false)
+  const [userForm, setUserForm] = useState({
+    email: '',
+    password: '',
+    nome: '',
+    role: 'viewer' as AdminUserRole,
+    active: true
   })
 
   // Carregar dados
@@ -54,9 +75,110 @@ export function AdminPage() {
     queryClient.invalidateQueries({ queryKey: queryKeys.taxonomy })
   }
 
+  const loadUsers = useCallback(async () => {
+    setUsersLoading(true)
+    try {
+      const { data, error: usersError } = await supabase
+        .from('user_profiles')
+        .select('id,email,nome,role,created_at,deleted_at')
+        .order('created_at', { ascending: false })
+
+      if (usersError) throw usersError
+      setUsers((data || []) as AdminUserRow[])
+    } catch (err: any) {
+      setError(err.message || 'Erro ao carregar usuarios')
+    } finally {
+      setUsersLoading(false)
+    }
+  }, [])
+
+  const runUserAction = async (action: 'create' | 'update', payload: Record<string, unknown>) => {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError) {
+      throw new Error(sessionError.message)
+    }
+
+    let accessToken = sessionData.session?.access_token
+    if (!accessToken) {
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
+      if (refreshError) {
+        throw new Error(refreshError.message)
+      }
+      accessToken = refreshData.session?.access_token
+    }
+
+    if (!accessToken) {
+      throw new Error('Sessao expirada. Faça login novamente.')
+    }
+
+    const { data, error: fnError } = await supabase.functions.invoke('admin-users', {
+      body: { action, payload },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY as string,
+      }
+    })
+
+    if (fnError) {
+      throw new Error(fnError.message)
+    }
+
+    if (data?.error) {
+      throw new Error(data.error)
+    }
+  }
+
+  const handleCreateUser = async () => {
+    if (!userForm.email || !userForm.password) {
+      setError('Email e senha sao obrigatorios')
+      return
+    }
+
+    setUsersSaving(true)
+    setError(null)
+    try {
+      await runUserAction('create', {
+        email: userForm.email,
+        password: userForm.password,
+        nome: userForm.nome,
+        role: userForm.role,
+        active: userForm.active
+      })
+      setUserForm({ email: '', password: '', nome: '', role: 'viewer', active: true })
+      setSuccess('Usuario criado com sucesso')
+      await loadUsers()
+      setTimeout(() => setSuccess(null), 2000)
+    } catch (err: any) {
+      setError(err.message || 'Erro ao criar usuario')
+    } finally {
+      setUsersSaving(false)
+    }
+  }
+
+  const handleUpdateUser = async (userId: string, updates: Record<string, unknown>) => {
+    setUsersSaving(true)
+    setError(null)
+    try {
+      await runUserAction('update', { userId, ...updates })
+      setSuccess('Usuario atualizado')
+      await loadUsers()
+      setTimeout(() => setSuccess(null), 2000)
+    } catch (err: any) {
+      setError(err.message || 'Erro ao atualizar usuario')
+    } finally {
+      setUsersSaving(false)
+    }
+  }
+
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  useEffect(() => {
+    if (activeSection === 'users') {
+      loadUsers()
+    }
+  }, [activeSection, loadUsers])
 
   // Obter itens do tipo selecionado
   const currentTypeConfig = TAXONOMY_TYPES.find(t => t.key === selectedType)
@@ -220,12 +342,12 @@ export function AdminPage() {
     return (
       <div key={item.id} className={`${isSubItem ? 'ml-8' : ''}`}>
         <div className={`flex items-center gap-2 p-3 rounded-xl mb-2 transition-all ${
-          item.is_active ? 'bg-white border border-neutral-200' : 'bg-neutral-100 border border-neutral-200 opacity-60'
+          item.is_active ? 'glass border border-rc-border' : 'bg-neutral-900/40 border border-white/5 opacity-60'
         }`}>
-          <GripVertical className="w-4 h-4 text-neutral-400 cursor-grab" />
+          <GripVertical className="w-4 h-4 text-rc-text-muted cursor-grab" />
           
           {hasChildren && (
-            <button onClick={() => toggleExpand(item.id)} className="p-1 hover:bg-neutral-100 rounded">
+            <button onClick={() => toggleExpand(item.id)} className="p-1 hover:bg-white/5 rounded">
               {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
             </button>
           )}
@@ -235,11 +357,11 @@ export function AdminPage() {
               type="text"
               value={editingName}
               onChange={(e) => setEditingName(e.target.value)}
-              className="flex-1 px-3 py-1.5 border border-primary-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              className="flex-1 px-3 py-1.5 border border-rc-border rounded-lg focus:ring-2 focus:ring-amber-400/40 bg-neutral-900/50 text-rc-text"
               autoFocus
             />
           ) : (
-            <span className={`flex-1 font-medium ${item.is_active ? 'text-neutral-800' : 'text-neutral-500 line-through'}`}>
+            <span className={`flex-1 font-medium ${item.is_active ? 'text-rc-text' : 'text-rc-text-muted line-through'}`}>
               {item.name}
             </span>
           )}
@@ -249,13 +371,13 @@ export function AdminPage() {
               <>
                 <button
                   onClick={() => { updateItem(item.id, { name: editingName }); setEditingId(null) }}
-                  className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
+                  className="p-2 text-emerald-200 hover:bg-emerald-500/10 rounded-lg"
                 >
                   <Save className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setEditingId(null)}
-                  className="p-2 text-neutral-500 hover:bg-neutral-100 rounded-lg"
+                  className="p-2 text-rc-text-muted hover:bg-white/5 rounded-lg"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -264,20 +386,20 @@ export function AdminPage() {
               <>
                 <button
                   onClick={() => toggleActive(item)}
-                  className={`p-2 rounded-lg ${item.is_active ? 'text-green-600 hover:bg-green-50' : 'text-neutral-400 hover:bg-neutral-100'}`}
+                  className={`p-2 rounded-lg ${item.is_active ? 'text-emerald-200 hover:bg-emerald-500/10' : 'text-rc-text-muted hover:bg-white/5'}`}
                   title={item.is_active ? 'Desativar' : 'Ativar'}
                 >
                   {item.is_active ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                 </button>
                 <button
                   onClick={() => { setEditingId(item.id); setEditingName(item.name) }}
-                  className="p-2 text-accent-600 hover:bg-accent-50 rounded-lg"
+                  className="p-2 text-amber-200 hover:bg-amber-500/10 rounded-lg"
                 >
                   <Edit2 className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => deleteItem(item.id)}
-                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                  className="p-2 text-red-200 hover:bg-red-500/10 rounded-lg"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -288,7 +410,7 @@ export function AdminPage() {
         
         {/* Subitens */}
         {hasChildren && isExpanded && (
-          <div className="ml-4 pl-4 border-l-2 border-neutral-200">
+          <div className="ml-4 pl-4 border-l-2 border-white/5">
             {subItems.map(sub => renderItem(sub, true))}
             
             {/* Adicionar subitem */}
@@ -305,33 +427,33 @@ export function AdminPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+        <Loader2 className="w-8 h-8 text-amber-200 animate-spin" />
       </div>
     )
   }
 
   return (
-    <div className="max-w-6xl mx-auto animate-fade-in">
+    <div className="max-w-6xl mx-auto animate-fade-in text-rc-text">
       <div className="mb-6">
-        <h1 className="text-2xl lg:text-4xl font-bold text-neutral-900">Configuracoes do Sistema</h1>
-        <p className="text-neutral-500 mt-1">Gerencie categorias, taxonomias e regras de nomenclatura</p>
+        <h1 className="text-2xl lg:text-4xl font-semibold text-rc-text tracking-wide">Configuracoes do Sistema</h1>
+        <p className="text-rc-text-muted mt-1">Gerencie categorias, regras de nomenclatura e usuarios</p>
       </div>
 
       {/* Mensagens */}
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-red-600" />
-          <span className="text-red-700">{error}</span>
-          <button onClick={() => setError(null)} className="ml-auto text-red-600 hover:text-red-800">
+        <div className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-red-200" />
+          <span className="text-red-200">{error}</span>
+          <button onClick={() => setError(null)} className="ml-auto text-red-200 hover:text-red-100">
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
       
       {success && (
-        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
-          <Check className="w-5 h-5 text-green-600" />
-          <span className="text-green-700">{success}</span>
+        <div className="mb-4 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center gap-3">
+          <Check className="w-5 h-5 text-emerald-200" />
+          <span className="text-emerald-200">{success}</span>
         </div>
       )}
 
@@ -341,8 +463,8 @@ export function AdminPage() {
           onClick={() => setActiveSection('taxonomy')}
           className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold transition-all ${
             activeSection === 'taxonomy'
-              ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-green'
-              : 'bg-white text-neutral-600 hover:bg-neutral-50 border border-neutral-200'
+              ? 'bg-gradient-to-r from-amber-400 to-amber-300 text-neutral-900 shadow-green'
+              : 'glass text-rc-text-muted hover:text-rc-text border border-rc-border'
           }`}
         >
           <Tag className="w-5 h-5" />
@@ -352,19 +474,30 @@ export function AdminPage() {
           onClick={() => setActiveSection('naming')}
           className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold transition-all ${
             activeSection === 'naming'
-              ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-green'
-              : 'bg-white text-neutral-600 hover:bg-neutral-50 border border-neutral-200'
+              ? 'bg-gradient-to-r from-amber-400 to-amber-300 text-neutral-900 shadow-green'
+              : 'glass text-rc-text-muted hover:text-rc-text border border-rc-border'
           }`}
         >
           <FileText className="w-5 h-5" />
           Nomenclatura
         </button>
         <button
+          onClick={() => setActiveSection('users')}
+          className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold transition-all ${
+            activeSection === 'users'
+              ? 'bg-gradient-to-r from-amber-400 to-amber-300 text-neutral-900 shadow-lg'
+              : 'glass text-rc-text-muted hover:text-rc-text border border-rc-border'
+          }`}
+        >
+          <Users className="w-5 h-5" />
+          Usuarios
+        </button>
+        <button
           onClick={() => setActiveSection('tools')}
           className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold transition-all ${
             activeSection === 'tools'
-              ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg'
-              : 'bg-white text-neutral-600 hover:bg-neutral-50 border border-neutral-200'
+              ? 'bg-gradient-to-r from-amber-400 to-amber-300 text-neutral-900 shadow-lg'
+              : 'glass text-rc-text-muted hover:text-rc-text border border-rc-border'
           }`}
         >
           <Wrench className="w-5 h-5" />
@@ -376,8 +509,8 @@ export function AdminPage() {
       {activeSection === 'taxonomy' ? (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Lista de tipos */}
-          <div className="lg:col-span-1 bg-white rounded-2xl p-4 shadow-glass h-fit">
-            <h3 className="font-semibold text-neutral-800 mb-3 flex items-center gap-2">
+          <div className="lg:col-span-1 glass-card p-4 h-fit">
+            <h3 className="font-semibold text-rc-text mb-3 flex items-center gap-2">
               <Settings className="w-4 h-4" />
               Categorias
             </h3>
@@ -390,13 +523,13 @@ export function AdminPage() {
                     onClick={() => setSelectedType(type.key)}
                     className={`w-full text-left px-3 py-2.5 rounded-lg transition-all flex items-center justify-between ${
                       selectedType === type.key
-                        ? 'bg-primary-100 text-primary-700 font-medium'
-                        : 'text-neutral-600 hover:bg-neutral-100'
+                        ? 'bg-amber-500/10 text-amber-200 font-medium'
+                        : 'text-rc-text-muted hover:bg-white/5'
                     }`}
                   >
                     <span className="text-sm">{type.label}</span>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      selectedType === type.key ? 'bg-primary-200' : 'bg-neutral-200'
+                      selectedType === type.key ? 'bg-amber-500/20 text-amber-200' : 'bg-white/10 text-rc-text-muted'
                     }`}>{count}</span>
                   </button>
                 )
@@ -405,30 +538,30 @@ export function AdminPage() {
           </div>
 
           {/* Editor de itens */}
-          <div className="lg:col-span-3 bg-white rounded-2xl p-5 shadow-glass">
-            <div className="flex items-center justify-between mb-4 pb-4 border-b border-neutral-100">
-              <h3 className="font-semibold text-neutral-800 text-lg">
+          <div className="lg:col-span-3 glass-card p-5">
+            <div className="flex items-center justify-between mb-4 pb-4 border-b border-white/5">
+              <h3 className="font-semibold text-rc-text text-lg">
                 {currentTypeConfig?.label}
                 {currentTypeConfig?.hasChildren && (
-                  <span className="text-sm font-normal text-neutral-500 ml-2">(com subitens)</span>
+                  <span className="text-sm font-normal text-rc-text-muted ml-2">(com subitens)</span>
                 )}
               </h3>
             </div>
 
             {/* Adicionar novo item */}
-            <div className="flex items-center gap-3 mb-4 p-3 bg-neutral-50 rounded-xl">
+            <div className="flex items-center gap-3 mb-4 p-3 bg-neutral-900/40 rounded-xl">
               <input
                 type="text"
                 value={newItemName}
                 onChange={(e) => setNewItemName(e.target.value)}
                 placeholder="Digite o nome do novo item..."
-                className="flex-1 px-4 py-2.5 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary-500"
+                className="flex-1 px-4 py-2.5 border border-rc-border rounded-lg focus:ring-2 focus:ring-amber-400/40 bg-neutral-900/50 text-rc-text"
                 onKeyDown={(e) => e.key === 'Enter' && addItem()}
               />
               <button
                 onClick={() => addItem()}
                 disabled={saving || !newItemName.trim()}
-                className="flex items-center gap-2 px-5 py-2.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 font-medium"
+                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-400 to-amber-300 text-neutral-900 rounded-lg disabled:opacity-50 font-medium"
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                 Adicionar
@@ -438,7 +571,7 @@ export function AdminPage() {
             {/* Lista de itens */}
             <div className="max-h-[500px] overflow-y-auto pr-2">
               {currentItems.length === 0 ? (
-                <div className="text-center py-12 text-neutral-500">
+                <div className="text-center py-12 text-rc-text-muted">
                   <Tag className="w-12 h-12 mx-auto mb-3 opacity-30" />
                   <p>Nenhum item cadastrado</p>
                   <p className="text-sm">Adicione o primeiro item acima</p>
@@ -451,45 +584,45 @@ export function AdminPage() {
         </div>
       ) : activeSection === 'naming' ? (
         /* Editor de Nomenclatura */
-        <div className="bg-white rounded-2xl p-6 shadow-glass">
-          <h3 className="font-semibold text-neutral-800 text-lg mb-4">Regras de Nomenclatura</h3>
+        <div className="glass-card p-6">
+          <h3 className="font-semibold text-rc-text text-lg mb-4">Regras de Nomenclatura</h3>
           
           {namingRules.map(rule => (
-            <div key={rule.id} className="mb-6 p-4 bg-neutral-50 rounded-xl">
+            <div key={rule.id} className="mb-6 p-4 bg-neutral-900/40 rounded-xl">
               <div className="flex items-center gap-3 mb-3">
-                <span className="font-medium text-neutral-800">{rule.name}</span>
+                <span className="font-medium text-rc-text">{rule.name}</span>
                 {rule.is_default && (
-                  <span className="px-2 py-0.5 bg-primary-100 text-primary-700 rounded text-xs font-medium">Padrao</span>
+                  <span className="px-2 py-0.5 bg-amber-500/10 text-amber-200 rounded text-xs font-medium">Padrao</span>
                 )}
               </div>
               
               <div className="mb-3">
-                <label className="block text-sm font-medium text-neutral-600 mb-1">Padrao de nomenclatura</label>
+                <label className="block text-sm font-medium text-rc-text-muted mb-1">Padrao de nomenclatura</label>
                 <input
                   type="text"
                   value={rule.pattern}
                   onChange={(e) => setNamingRules(prev => prev.map(r => r.id === rule.id ? { ...r, pattern: e.target.value } : r))}
-                  className="w-full px-4 py-2.5 border border-neutral-200 rounded-lg font-mono text-sm"
+                  className="w-full px-4 py-2.5 border border-rc-border rounded-lg font-mono text-sm bg-neutral-900/50 text-rc-text"
                 />
               </div>
               
               <div className="flex flex-wrap gap-2 mb-4">
-                <span className="text-xs text-neutral-500">Variaveis disponiveis:</span>
+                <span className="text-xs text-rc-text-muted">Variaveis disponiveis:</span>
                 {['{area}', '{ponto}', '{tipo}', '{titulo}', '{data}', '{seq}', '{ext}', '{nucleo}', '{responsavel}'].map(v => (
-                  <code key={v} className="px-2 py-0.5 bg-neutral-200 rounded text-xs">{v}</code>
+                  <code key={v} className="px-2 py-0.5 bg-white/10 rounded text-xs text-rc-text">{v}</code>
                 ))}
               </div>
               
               {/* Preview */}
-              <div className="p-3 bg-white rounded-lg border border-neutral-200">
-                <div className="text-xs text-neutral-500 mb-2">Preview:</div>
-                <code className="text-sm text-primary-700 break-all">{generatePreview(rule.pattern)}</code>
+              <div className="p-3 glass rounded-lg border border-rc-border">
+                <div className="text-xs text-rc-text-muted mb-2">Preview:</div>
+                <code className="text-sm text-amber-200 break-all">{generatePreview(rule.pattern)}</code>
               </div>
               
               <button
                 onClick={() => saveNamingRule(rule)}
                 disabled={saving}
-                className="mt-3 flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 text-sm font-medium"
+                className="mt-3 flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-400 to-amber-300 text-neutral-900 rounded-lg disabled:opacity-50 text-sm font-medium"
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 Salvar Regra
@@ -498,21 +631,160 @@ export function AdminPage() {
           ))}
           
           {/* Dados de teste para preview */}
-          <div className="mt-6 p-4 bg-accent-50 rounded-xl">
-            <h4 className="font-medium text-accent-800 mb-3">Dados de teste para preview</h4>
+          <div className="mt-6 p-4 bg-emerald-500/10 rounded-xl">
+            <h4 className="font-medium text-emerald-200 mb-3">Dados de teste para preview</h4>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {Object.entries(previewData).map(([key, value]) => (
                 <div key={key}>
-                  <label className="block text-xs text-accent-600 mb-1">{key}</label>
+                  <label className="block text-xs text-emerald-200 mb-1">{key}</label>
                   <input
                     type="text"
                     value={value}
                     onChange={(e) => setPreviewData(prev => ({ ...prev, [key]: e.target.value }))}
-                    className="w-full px-3 py-1.5 border border-accent-200 rounded text-sm"
+                    className="w-full px-3 py-1.5 border border-emerald-400/30 rounded text-sm bg-neutral-900/50 text-rc-text"
                   />
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      ) : activeSection === 'users' ? (
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <div className="glass-card p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <UserPlus className="w-5 h-5 text-amber-200" />
+              <h3 className="font-semibold text-rc-text text-lg">Cadastrar usuario</h3>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-rc-text-muted mb-2">Email</label>
+                <input
+                  type="email"
+                  value={userForm.email}
+                  onChange={(e) => setUserForm(prev => ({ ...prev, email: e.target.value }))}
+                  className="w-full px-4 py-3 border border-rc-border rounded-lg bg-neutral-900/50 text-rc-text"
+                  placeholder="usuario@exemplo.com"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-rc-text-muted mb-2">Senha temporaria</label>
+                <input
+                  type="password"
+                  value={userForm.password}
+                  onChange={(e) => setUserForm(prev => ({ ...prev, password: e.target.value }))}
+                  className="w-full px-4 py-3 border border-rc-border rounded-lg bg-neutral-900/50 text-rc-text"
+                  placeholder="********"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-rc-text-muted mb-2">Nome</label>
+                <input
+                  type="text"
+                  value={userForm.nome}
+                  onChange={(e) => setUserForm(prev => ({ ...prev, nome: e.target.value }))}
+                  className="w-full px-4 py-3 border border-rc-border rounded-lg bg-neutral-900/50 text-rc-text"
+                  placeholder="Nome do usuario"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-rc-text-muted mb-2">Perfil</label>
+                <select
+                  value={userForm.role}
+                  onChange={(e) => setUserForm(prev => ({ ...prev, role: e.target.value as AdminUserRole }))}
+                  className="w-full px-4 py-3 border border-rc-border rounded-lg bg-neutral-900/50 text-rc-text"
+                >
+                  <option value="admin">Administrador</option>
+                  <option value="editor">Editor</option>
+                  <option value="viewer">Visualizador</option>
+                </select>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-rc-text-muted">
+                <input
+                  type="checkbox"
+                  checked={userForm.active}
+                  onChange={(e) => setUserForm(prev => ({ ...prev, active: e.target.checked }))}
+                  className="h-4 w-4 rounded border-rc-border bg-neutral-900/50"
+                />
+                Usuario ativo
+              </label>
+              <button
+                onClick={handleCreateUser}
+                disabled={usersSaving}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-amber-400 to-amber-300 text-neutral-900 rounded-lg font-semibold disabled:opacity-50"
+              >
+                {usersSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                Criar usuario
+              </button>
+              <p className="text-xs text-rc-text-muted">
+                Alteracoes de perfil exigem novo login do usuario.
+              </p>
+            </div>
+          </div>
+
+          <div className="xl:col-span-2 glass-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="font-semibold text-rc-text text-lg">Usuarios cadastrados</h3>
+                <p className="text-sm text-rc-text-muted">Administrar perfis e acessos</p>
+              </div>
+              <button
+                onClick={loadUsers}
+                className="flex items-center gap-2 px-3 py-2 text-sm border border-rc-border rounded-lg hover:bg-white/5"
+              >
+                <RefreshCcw className="w-4 h-4" />
+                Atualizar
+              </button>
+            </div>
+
+            {usersLoading ? (
+              <div className="flex items-center justify-center h-40">
+                <Loader2 className="w-6 h-6 text-amber-200 animate-spin" />
+              </div>
+            ) : users.length === 0 ? (
+              <div className="text-center py-12 text-rc-text-muted">
+                <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p>Nenhum usuario encontrado</p>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+                {users.map(user => {
+                  const isActiveUser = !user.deleted_at
+                  return (
+                    <div key={user.id} className="glass rounded-xl p-4 border border-rc-border">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div>
+                          <div className="font-semibold text-rc-text">{user.nome || user.email}</div>
+                          <div className="text-xs text-rc-text-muted">{user.email}</div>
+                          <div className="text-xs text-rc-text-muted mt-1">Criado em {new Date(user.created_at).toLocaleDateString('pt-BR')}</div>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <select
+                            value={user.role}
+                            onChange={(e) => handleUpdateUser(user.id, { role: e.target.value })}
+                            className="px-3 py-2 border border-rc-border rounded-lg bg-neutral-900/60 text-rc-text text-sm"
+                          >
+                            <option value="admin">Administrador</option>
+                            <option value="editor">Editor</option>
+                            <option value="viewer">Visualizador</option>
+                          </select>
+                          <button
+                            onClick={() => handleUpdateUser(user.id, { active: !isActiveUser })}
+                            className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border ${
+                              isActiveUser
+                                ? 'border-emerald-500/40 text-emerald-200 hover:bg-emerald-500/10'
+                                : 'border-red-500/40 text-red-200 hover:bg-red-500/10'
+                            }`}
+                          >
+                            {isActiveUser ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
+                            {isActiveUser ? 'Ativo' : 'Desativado'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </div>
       ) : activeSection === 'tools' ? (
@@ -542,19 +814,19 @@ function SubItemInput({ parentId, onAdd, saving }: { parentId: string, onAdd: (n
   }
 
   return (
-    <div className="flex items-center gap-2 p-2 mb-2 bg-neutral-50 rounded-lg">
+    <div className="flex items-center gap-2 p-2 mb-2 bg-neutral-900/40 rounded-lg">
       <input
         type="text"
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder="Novo subitem..."
-        className="flex-1 px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
+        className="flex-1 px-3 py-2 border border-rc-border rounded-lg text-sm focus:ring-2 focus:ring-amber-400/40 bg-neutral-900/50 text-rc-text"
         onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
       />
       <button
         onClick={handleAdd}
         disabled={!value.trim() || isAdding || saving}
-        className="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 text-sm font-medium transition-all"
+        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-400 to-amber-300 text-neutral-900 rounded-lg disabled:opacity-50 text-sm font-medium transition-all"
       >
         {isAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
         Confirmar
@@ -638,26 +910,26 @@ function ThumbnailGenerator() {
   }
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-glass">
-      <h3 className="font-semibold text-neutral-800 text-lg mb-4 flex items-center gap-2">
-        <Video className="w-5 h-5 text-purple-500" />
+    <div className="glass-card p-6">
+      <h3 className="font-semibold text-rc-text text-lg mb-4 flex items-center gap-2">
+        <Video className="w-5 h-5 text-amber-200" />
         Gerador de Thumbnails para Videos
       </h3>
       
-      <p className="text-neutral-600 mb-4">
+      <p className="text-rc-text-muted mb-4">
         Esta ferramenta gera imagens de preview para videos que foram enviados antes do sistema de thumbnails automaticos.
       </p>
 
-      <div className="p-4 bg-purple-50 rounded-xl mb-4">
+      <div className="p-4 bg-amber-500/10 rounded-xl mb-4">
         <div className="flex items-center justify-between">
           <div>
-            <span className="text-2xl font-bold text-purple-700">{videos.length}</span>
-            <span className="text-purple-600 ml-2">videos sem thumbnail</span>
+            <span className="text-2xl font-bold text-amber-200">{videos.length}</span>
+            <span className="text-rc-text-muted ml-2">videos sem thumbnail</span>
           </div>
           <button
             onClick={generateThumbnails}
             disabled={processing || videos.length === 0}
-            className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl font-semibold disabled:opacity-50 flex items-center gap-2"
+            className="px-6 py-3 bg-gradient-to-r from-amber-400 to-amber-300 text-neutral-900 rounded-xl font-semibold disabled:opacity-50 flex items-center gap-2"
           >
             {processing ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImageIcon className="w-5 h-5" />}
             {processing ? 'Processando...' : 'Gerar Thumbnails'}
@@ -667,14 +939,14 @@ function ThumbnailGenerator() {
 
       {processing && (
         <div className="mb-4">
-          <div className="flex justify-between text-sm text-neutral-600 mb-2">
+          <div className="flex justify-between text-sm text-rc-text-muted mb-2">
             <span>Progresso: {progress.current}/{progress.total}</span>
-            <span className="text-green-600">✓ {progress.success}</span>
-            <span className="text-red-600">✗ {progress.failed}</span>
+            <span className="text-emerald-200">✓ {progress.success}</span>
+            <span className="text-red-200">✗ {progress.failed}</span>
           </div>
-          <div className="h-3 bg-neutral-200 rounded-full overflow-hidden">
+          <div className="h-3 bg-neutral-900/60 rounded-full overflow-hidden">
             <div 
-              className="h-full bg-gradient-to-r from-purple-400 to-purple-600 transition-all"
+              className="h-full bg-gradient-to-r from-amber-400 to-amber-300 transition-all"
               style={{ width: `${(progress.current / progress.total) * 100}%` }}
             />
           </div>
@@ -682,8 +954,8 @@ function ThumbnailGenerator() {
       )}
 
       {log.length > 0 && (
-        <div className="p-4 bg-neutral-900 rounded-xl max-h-64 overflow-y-auto">
-          <pre className="text-xs text-green-400 font-mono whitespace-pre-wrap">
+        <div className="p-4 bg-neutral-950 rounded-xl max-h-64 overflow-y-auto">
+          <pre className="text-xs text-emerald-200 font-mono whitespace-pre-wrap">
             {log.join('\n')}
           </pre>
         </div>
@@ -765,12 +1037,12 @@ function UploadPipelineMonitor() {
   }
 
   return (
-    <div className="bg-white rounded-2xl p-5 shadow-glass">
+    <div className="glass-card p-5">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-neutral-800 text-lg">Monitor do Pipeline</h3>
+        <h3 className="font-semibold text-rc-text text-lg">Monitor do Pipeline</h3>
         <button
           onClick={loadStats}
-          className="flex items-center gap-2 text-xs text-neutral-500 hover:text-neutral-700"
+          className="flex items-center gap-2 text-xs text-rc-text-muted hover:text-rc-text"
           disabled={loading}
         >
           <RefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -782,60 +1054,60 @@ function UploadPipelineMonitor() {
         <button
           onClick={() => runMaintenance('process-outbox')}
           disabled={actionLoading}
-          className="px-3 py-2 text-xs font-semibold rounded-lg bg-accent-50 text-accent-700 hover:bg-accent-100 disabled:opacity-50"
+          className="px-3 py-2 text-xs font-semibold rounded-lg bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-50"
         >
           Rodar process-outbox
         </button>
         <button
           onClick={() => runMaintenance('reconcile-uploads')}
           disabled={actionLoading}
-          className="px-3 py-2 text-xs font-semibold rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-50"
+          className="px-3 py-2 text-xs font-semibold rounded-lg bg-amber-500/10 text-amber-200 hover:bg-amber-500/20 disabled:opacity-50"
         >
           Rodar reconcile-uploads
         </button>
       </div>
 
       {actionMessage && (
-        <div className="mb-3 text-xs text-neutral-600 bg-neutral-50 border border-neutral-100 rounded-lg px-3 py-2">
+        <div className="mb-3 text-xs text-rc-text-muted bg-neutral-900/40 border border-white/5 rounded-lg px-3 py-2">
           {actionMessage}
         </div>
       )}
 
       {!stats ? (
-        <div className="text-sm text-neutral-500">Sem dados</div>
+        <div className="text-sm text-rc-text-muted">Sem dados</div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
-          <div className="p-3 bg-neutral-50 rounded-xl">
-            <p className="text-xs text-neutral-500">Total</p>
-            <p className="text-lg font-bold text-neutral-900">{stats.total_jobs}</p>
+          <div className="p-3 bg-neutral-900/40 rounded-xl">
+            <p className="text-xs text-rc-text-muted">Total</p>
+            <p className="text-lg font-bold text-rc-text">{stats.total_jobs}</p>
           </div>
-          <div className="p-3 bg-amber-50 rounded-xl">
-            <p className="text-xs text-amber-700">Pendentes</p>
-            <p className="text-lg font-bold text-amber-800">{stats.pending}</p>
+          <div className="p-3 bg-amber-500/10 rounded-xl">
+            <p className="text-xs text-amber-200">Pendentes</p>
+            <p className="text-lg font-bold text-amber-200">{stats.pending}</p>
           </div>
-          <div className="p-3 bg-blue-50 rounded-xl">
-            <p className="text-xs text-blue-700">Enviando</p>
-            <p className="text-lg font-bold text-blue-800">{stats.uploading}</p>
+          <div className="p-3 bg-emerald-500/10 rounded-xl">
+            <p className="text-xs text-emerald-200">Enviando</p>
+            <p className="text-lg font-bold text-emerald-200">{stats.uploading}</p>
           </div>
-          <div className="p-3 bg-purple-50 rounded-xl">
-            <p className="text-xs text-purple-700">Enviados</p>
-            <p className="text-lg font-bold text-purple-800">{stats.uploaded}</p>
+          <div className="p-3 bg-neutral-900/40 rounded-xl">
+            <p className="text-xs text-rc-text-muted">Enviados</p>
+            <p className="text-lg font-bold text-rc-text">{stats.uploaded}</p>
           </div>
-          <div className="p-3 bg-emerald-50 rounded-xl">
-            <p className="text-xs text-emerald-700">Commitados</p>
-            <p className="text-lg font-bold text-emerald-800">{stats.committed}</p>
+          <div className="p-3 bg-emerald-500/10 rounded-xl">
+            <p className="text-xs text-emerald-200">Commitados</p>
+            <p className="text-lg font-bold text-emerald-200">{stats.committed}</p>
           </div>
-          <div className="p-3 bg-red-50 rounded-xl">
-            <p className="text-xs text-red-700">Falhas</p>
-            <p className="text-lg font-bold text-red-800">{stats.failed}</p>
+          <div className="p-3 bg-red-500/10 rounded-xl">
+            <p className="text-xs text-red-200">Falhas</p>
+            <p className="text-lg font-bold text-red-200">{stats.failed}</p>
           </div>
-          <div className="p-3 bg-neutral-100 rounded-xl">
-            <p className="text-xs text-neutral-600">Expirados</p>
-            <p className="text-lg font-bold text-neutral-800">{stats.expired}</p>
+          <div className="p-3 bg-neutral-900/40 rounded-xl">
+            <p className="text-xs text-rc-text-muted">Expirados</p>
+            <p className="text-lg font-bold text-rc-text">{stats.expired}</p>
           </div>
-          <div className="p-3 bg-accent-50 rounded-xl">
-            <p className="text-xs text-accent-700">Outbox</p>
-            <p className="text-lg font-bold text-accent-800">{stats.outbox_pending}</p>
+          <div className="p-3 bg-emerald-500/10 rounded-xl">
+            <p className="text-xs text-emerald-200">Outbox</p>
+            <p className="text-lg font-bold text-emerald-200">{stats.outbox_pending}</p>
           </div>
         </div>
       )}
@@ -890,15 +1162,15 @@ function UploadJobsList() {
   }, [loadJobs])
 
   return (
-    <div className="bg-white rounded-2xl p-5 shadow-glass">
+    <div className="glass-card p-5">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-neutral-800 text-lg flex items-center gap-2">
-          <ListChecks className="w-5 h-5 text-primary-500" />
+        <h3 className="font-semibold text-rc-text text-lg flex items-center gap-2">
+          <ListChecks className="w-5 h-5 text-amber-200" />
           Jobs Recentes
         </h3>
         <button
           onClick={loadJobs}
-          className="flex items-center gap-2 text-xs text-neutral-500 hover:text-neutral-700"
+          className="flex items-center gap-2 text-xs text-rc-text-muted hover:text-rc-text"
           disabled={loading}
         >
           <RefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -907,11 +1179,11 @@ function UploadJobsList() {
       </div>
 
       <div className="flex items-center gap-3 mb-4">
-        <label className="text-xs text-neutral-500">Status</label>
+        <label className="text-xs text-rc-text-muted">Status</label>
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value as any)}
-          className="px-3 py-2 border border-neutral-200 rounded-lg text-sm"
+          className="px-3 py-2 border border-rc-border rounded-lg text-sm bg-neutral-900/50 text-rc-text"
         >
           <option value="ALL">Todos</option>
           <option value="PENDING">PENDING</option>
@@ -923,25 +1195,25 @@ function UploadJobsList() {
         </select>
       </div>
 
-      <div className="border border-neutral-100 rounded-xl overflow-hidden">
-        <div className="grid grid-cols-12 bg-neutral-50 text-xs font-semibold text-neutral-600 px-3 py-2">
+      <div className="border border-white/5 rounded-xl overflow-hidden">
+        <div className="grid grid-cols-12 bg-neutral-900/40 text-xs font-semibold text-rc-text-muted px-3 py-2">
           <span className="col-span-3">Arquivo</span>
           <span className="col-span-3">Status</span>
           <span className="col-span-2">Tamanho</span>
           <span className="col-span-4">Criado</span>
         </div>
         {loading ? (
-          <div className="p-6 text-center text-neutral-500 text-sm">Carregando...</div>
+          <div className="p-6 text-center text-rc-text-muted text-sm">Carregando...</div>
         ) : jobs.length === 0 ? (
-          <div className="p-6 text-center text-neutral-500 text-sm">Nenhum job encontrado</div>
+          <div className="p-6 text-center text-rc-text-muted text-sm">Nenhum job encontrado</div>
         ) : (
-          <div className="divide-y divide-neutral-100">
+          <div className="divide-y divide-white/5">
             {jobs.map((job) => (
               <div key={job.id} className="grid grid-cols-12 px-3 py-2 text-sm">
-                <span className="col-span-3 text-neutral-800 truncate" title={job.original_filename}>{job.original_filename}</span>
-                <span className="col-span-3 text-neutral-600 font-semibold">{job.status}</span>
-                <span className="col-span-2 text-neutral-500">{formatBytes(job.size_bytes)}</span>
-                <span className="col-span-4 text-neutral-500">{new Date(job.created_at).toLocaleString('pt-BR')}</span>
+                <span className="col-span-3 text-rc-text truncate" title={job.original_filename}>{job.original_filename}</span>
+                <span className="col-span-3 text-rc-text-muted font-semibold">{job.status}</span>
+                <span className="col-span-2 text-rc-text-muted">{formatBytes(job.size_bytes)}</span>
+                <span className="col-span-4 text-rc-text-muted">{new Date(job.created_at).toLocaleString('pt-BR')}</span>
               </div>
             ))}
           </div>
@@ -993,15 +1265,15 @@ function FunctionRunsList() {
   }, [loadRuns])
 
   return (
-    <div className="bg-white rounded-2xl p-5 shadow-glass">
+    <div className="glass-card p-5">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-neutral-800 text-lg flex items-center gap-2">
-          <Activity className="w-5 h-5 text-primary-500" />
+        <h3 className="font-semibold text-rc-text text-lg flex items-center gap-2">
+          <Activity className="w-5 h-5 text-amber-200" />
           Logs das Funcoes
         </h3>
         <button
           onClick={loadRuns}
-          className="flex items-center gap-2 text-xs text-neutral-500 hover:text-neutral-700"
+          className="flex items-center gap-2 text-xs text-rc-text-muted hover:text-rc-text"
           disabled={loading}
         >
           <RefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -1010,21 +1282,21 @@ function FunctionRunsList() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <label className="text-xs text-neutral-500">Funcao</label>
+        <label className="text-xs text-rc-text-muted">Funcao</label>
         <select
           value={functionName}
           onChange={(e) => setFunctionName(e.target.value as any)}
-          className="px-3 py-2 border border-neutral-200 rounded-lg text-sm"
+          className="px-3 py-2 border border-rc-border rounded-lg text-sm bg-neutral-900/50 text-rc-text"
         >
           <option value="ALL">Todas</option>
           <option value="process-outbox">process-outbox</option>
           <option value="reconcile-uploads">reconcile-uploads</option>
         </select>
-        <label className="text-xs text-neutral-500">Status</label>
+        <label className="text-xs text-rc-text-muted">Status</label>
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value as any)}
-          className="px-3 py-2 border border-neutral-200 rounded-lg text-sm"
+          className="px-3 py-2 border border-rc-border rounded-lg text-sm bg-neutral-900/50 text-rc-text"
         >
           <option value="ALL">Todos</option>
           <option value="success">success</option>
@@ -1032,27 +1304,27 @@ function FunctionRunsList() {
         </select>
       </div>
 
-      <div className="border border-neutral-100 rounded-xl overflow-hidden">
-        <div className="grid grid-cols-12 bg-neutral-50 text-xs font-semibold text-neutral-600 px-3 py-2">
+      <div className="border border-white/5 rounded-xl overflow-hidden">
+        <div className="grid grid-cols-12 bg-neutral-900/40 text-xs font-semibold text-rc-text-muted px-3 py-2">
           <span className="col-span-3">Funcao</span>
           <span className="col-span-2">Status</span>
           <span className="col-span-4">Detalhes</span>
           <span className="col-span-3">Data</span>
         </div>
         {loading ? (
-          <div className="p-6 text-center text-neutral-500 text-sm">Carregando...</div>
+          <div className="p-6 text-center text-rc-text-muted text-sm">Carregando...</div>
         ) : runs.length === 0 ? (
-          <div className="p-6 text-center text-neutral-500 text-sm">Sem logs ainda</div>
+          <div className="p-6 text-center text-rc-text-muted text-sm">Sem logs ainda</div>
         ) : (
-          <div className="divide-y divide-neutral-100">
+          <div className="divide-y divide-white/5">
             {runs.map((run) => (
               <div key={run.id} className="grid grid-cols-12 px-3 py-2 text-sm">
-                <span className="col-span-3 text-neutral-800">{run.function_name}</span>
-                <span className={`col-span-2 font-semibold ${run.status === 'error' ? 'text-red-600' : 'text-emerald-600'}`}>{run.status}</span>
-                <span className="col-span-4 text-neutral-600 truncate" title={JSON.stringify(run.details)}>
+                <span className="col-span-3 text-rc-text">{run.function_name}</span>
+                <span className={`col-span-2 font-semibold ${run.status === 'error' ? 'text-red-200' : 'text-emerald-200'}`}>{run.status}</span>
+                <span className="col-span-4 text-rc-text-muted truncate" title={JSON.stringify(run.details)}>
                   {JSON.stringify(run.details)}
                 </span>
-                <span className="col-span-3 text-neutral-500">{new Date(run.created_at).toLocaleString('pt-BR')}</span>
+                <span className="col-span-3 text-rc-text-muted">{new Date(run.created_at).toLocaleString('pt-BR')}</span>
               </div>
             ))}
           </div>
@@ -1118,13 +1390,13 @@ function AuditTrail() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   return (
-    <div className="bg-white rounded-2xl p-5 shadow-glass">
+    <div className="glass-card p-5">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-neutral-800 text-lg flex items-center gap-2">
-          <History className="w-5 h-5 text-primary-500" />
+        <h3 className="font-semibold text-rc-text text-lg flex items-center gap-2">
+          <History className="w-5 h-5 text-amber-200" />
           Auditoria
         </h3>
-        <span className="text-xs text-neutral-500">{total} registros</span>
+        <span className="text-xs text-rc-text-muted">{total} registros</span>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
@@ -1133,12 +1405,12 @@ function AuditTrail() {
           value={itemId}
           onChange={(e) => { setPage(1); setItemId(e.target.value) }}
           placeholder="Filtrar por ID do item"
-          className="flex-1 px-3 py-2 border border-neutral-200 rounded-lg text-sm"
+          className="flex-1 px-3 py-2 border border-rc-border rounded-lg text-sm bg-neutral-900/50 text-rc-text"
         />
         <select
           value={action}
           onChange={(e) => { setPage(1); setAction(e.target.value as any) }}
-          className="px-3 py-2 border border-neutral-200 rounded-lg text-sm"
+          className="px-3 py-2 border border-rc-border rounded-lg text-sm bg-neutral-900/50 text-rc-text"
         >
           <option value="ALL">Todas</option>
           <option value="INSERT">INSERT</option>
@@ -1147,8 +1419,8 @@ function AuditTrail() {
         </select>
       </div>
 
-      <div className="border border-neutral-100 rounded-xl overflow-hidden">
-        <div className="grid grid-cols-12 bg-neutral-50 text-xs font-semibold text-neutral-600 px-3 py-2">
+      <div className="border border-white/5 rounded-xl overflow-hidden">
+        <div className="grid grid-cols-12 bg-neutral-900/40 text-xs font-semibold text-rc-text-muted px-3 py-2">
           <span className="col-span-2">Data</span>
           <span className="col-span-2">Item</span>
           <span className="col-span-2">Ação</span>
@@ -1156,18 +1428,18 @@ function AuditTrail() {
           <span className="col-span-3">Valores</span>
         </div>
         {loading ? (
-          <div className="p-6 text-center text-neutral-500 text-sm">Carregando...</div>
+          <div className="p-6 text-center text-rc-text-muted text-sm">Carregando...</div>
         ) : items.length === 0 ? (
-          <div className="p-6 text-center text-neutral-500 text-sm">Nenhum registro encontrado</div>
+          <div className="p-6 text-center text-rc-text-muted text-sm">Nenhum registro encontrado</div>
         ) : (
-          <div className="divide-y divide-neutral-100">
+          <div className="divide-y divide-white/5">
             {items.map((row) => (
               <div key={row.id} className="grid grid-cols-12 px-3 py-2 text-sm">
-                <span className="col-span-2 text-neutral-600">{new Date(row.changed_at).toLocaleString('pt-BR')}</span>
-                <span className="col-span-2 font-medium text-neutral-800">#{row.item_id}</span>
-                <span className={`col-span-2 font-semibold ${row.action === 'DELETE' ? 'text-red-600' : row.action === 'INSERT' ? 'text-emerald-600' : 'text-amber-600'}`}>{row.action}</span>
-                <span className="col-span-3 text-neutral-700 truncate">{row.field_name || '-'}</span>
-                <span className="col-span-3 text-neutral-600 truncate">
+                <span className="col-span-2 text-rc-text-muted">{new Date(row.changed_at).toLocaleString('pt-BR')}</span>
+                <span className="col-span-2 font-medium text-rc-text">#{row.item_id}</span>
+                <span className={`col-span-2 font-semibold ${row.action === 'DELETE' ? 'text-red-200' : row.action === 'INSERT' ? 'text-emerald-200' : 'text-amber-200'}`}>{row.action}</span>
+                <span className="col-span-3 text-rc-text truncate">{row.field_name || '-'}</span>
+                <span className="col-span-3 text-rc-text-muted truncate">
                   {row.old_value && row.new_value ? `${row.old_value} → ${row.new_value}` : row.new_value || row.old_value || '-'}
                 </span>
               </div>
@@ -1180,15 +1452,15 @@ function AuditTrail() {
         <button
           onClick={() => setPage(p => Math.max(1, p - 1))}
           disabled={page === 1}
-          className="px-3 py-2 text-sm rounded-lg border border-neutral-200 disabled:opacity-50"
+          className="px-3 py-2 text-sm rounded-lg border border-rc-border disabled:opacity-50"
         >
           Anterior
         </button>
-        <span className="text-xs text-neutral-500">Pagina {page} de {totalPages}</span>
+        <span className="text-xs text-rc-text-muted">Pagina {page} de {totalPages}</span>
         <button
           onClick={() => setPage(p => Math.min(totalPages, p + 1))}
           disabled={page >= totalPages}
-          className="px-3 py-2 text-sm rounded-lg border border-neutral-200 disabled:opacity-50"
+          className="px-3 py-2 text-sm rounded-lg border border-rc-border disabled:opacity-50"
         >
           Proxima
         </button>
